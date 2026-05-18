@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
 
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
-type GiftFx = { id: string; emoji: string; from: string; to: string };
+type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -175,12 +175,12 @@ function RoomPage() {
       <div className="pointer-events-none fixed inset-0 flex items-end justify-center pb-40 z-30">
         {fx.map((f, i) => (
           <div key={f.id} className="absolute gift-float" style={{ left: `${20 + (i * 15) % 60}%` }}>
-            <div className="bg-gradient-primary shadow-glow rounded-2xl px-4 py-2 flex items-center gap-2">
+            <div className="bg-gradient-primary shadow-glow rounded-2xl px-4 py-2.5 flex items-center gap-2 animate-scale-in">
               <span className="text-3xl">{f.emoji}</span>
-              <div className="text-xs text-primary-foreground">
-                <p className="font-semibold">{f.from}</p>
-                <p className="opacity-80">→ {f.to}</p>
-              </div>
+              <p className="text-xs text-primary-foreground font-semibold whitespace-nowrap">
+                {f.from}, {f.giftName} gönderdi! {f.emoji}
+                {f.to === "kendine" && <span className="opacity-80"> (kendine)</span>}
+              </p>
             </div>
           </div>
         ))}
