@@ -10,10 +10,12 @@ export type SeatLite = {
   speaking?: boolean;
 };
 
-export function SeatGrid({ seats, ownerId, onSeatClick, onSelectTarget, targetUserId }: {
+export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSeat, onSelectTarget, targetUserId }: {
   seats: SeatLite[];
   ownerId: string;
+  currentUserId?: string | null;
   onSeatClick: (s: SeatLite) => void;
+  onLeaveSeat?: (s: SeatLite) => void;
   onSelectTarget?: (userId: string) => void;
   targetUserId?: string | null;
 }) {
@@ -23,18 +25,20 @@ export function SeatGrid({ seats, ownerId, onSeatClick, onSelectTarget, targetUs
         const occupied = !!s.user_id;
         const isOwner = s.user_id === ownerId;
         const isTarget = targetUserId === s.user_id;
+        const isSelf = currentUserId && s.user_id === currentUserId;
         return (
           <button
             key={s.id}
             onClick={() => {
-              if (occupied && onSelectTarget && s.user_id) onSelectTarget(s.user_id);
+              if (isSelf && onLeaveSeat) onLeaveSeat(s);
+              else if (occupied && onSelectTarget && s.user_id) onSelectTarget(s.user_id);
               else onSeatClick(s);
             }}
             className="flex flex-col items-center gap-1.5"
           >
             <div className={`relative size-16 rounded-full flex items-center justify-center transition ${
               occupied
-                ? `bg-gradient-primary shadow-glow ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""}`
+                ? `bg-gradient-primary shadow-glow ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""}`
                 : "bg-card border-2 border-dashed border-border"
             }`}>
               {occupied ? (
