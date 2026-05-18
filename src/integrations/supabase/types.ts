@@ -14,16 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      gift_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          gift_id: string
+          id: string
+          receiver_id: string
+          room_id: string
+          sender_id: string
+          total_cost: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          gift_id: string
+          id?: string
+          receiver_id: string
+          room_id: string
+          sender_id: string
+          total_cost: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gift_id?: string
+          id?: string
+          receiver_id?: string
+          room_id?: string
+          sender_id?: string
+          total_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_transactions_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "gifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_transactions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gifts: {
+        Row: {
+          cost: number
+          created_at: string
+          emoji: string
+          id: string
+          name: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          emoji: string
+          id?: string
+          name: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          emoji?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          coin_balance: number
+          coins_earned: number
+          created_at: string
+          display_name: string
+          id: string
+          is_guest: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          coin_balance?: number
+          coins_earned?: number
+          created_at?: string
+          display_name?: string
+          id: string
+          is_guest?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          coin_balance?: number
+          coins_earned?: number
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_guest?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_type: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_seats: {
+        Row: {
+          id: string
+          is_locked: boolean
+          is_muted: boolean
+          room_id: string
+          seat_index: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          is_locked?: boolean
+          is_muted?: boolean
+          room_id: string
+          seat_index: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          is_locked?: boolean
+          is_muted?: boolean
+          room_id?: string
+          seat_index?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_seats_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          owner_id: string
+          seat_count: number
+          tag: string | null
+          title: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          owner_id: string
+          seat_count?: number
+          tag?: string | null
+          title: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          owner_id?: string
+          seat_count?: number
+          tag?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +390,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
