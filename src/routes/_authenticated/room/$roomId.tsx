@@ -61,9 +61,11 @@ function RoomPage() {
         const tx = p.new as any;
         const { data: g } = await supabase.from("gifts").select("emoji,name").eq("id", tx.gift_id).single();
         const fromName = profiles[tx.sender_id]?.display_name ?? "Birisi";
-        const toName = profiles[tx.receiver_id]?.display_name ?? "yayıncı";
+        const toName = tx.sender_id === tx.receiver_id
+          ? "kendine"
+          : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
-        setFx(prev => [...prev, { id, emoji: g?.emoji ?? "🎁", from: fromName, to: toName }]);
+        setFx(prev => [...prev, { id, emoji: g?.emoji ?? "🎁", from: fromName, to: toName, giftName: g?.name ?? "Hediye" }]);
         setTimeout(() => setFx(prev => prev.filter(f => f.id !== id)), 2400);
       })
       .subscribe();
