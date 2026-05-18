@@ -7,7 +7,7 @@ import { GiftPicker } from "@/components/app/GiftPicker";
 import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/room/")({ component: RoomPage });
+export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
 
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
 type GiftFx = { id: string; emoji: string; from: string; to: string };

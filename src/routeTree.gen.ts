@@ -16,7 +16,7 @@ import { Route as AuthenticatedWalletRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
-import { Route as AuthenticatedRoomRouteImport } from './routes/_authenticated/room.'
+import { Route as AuthenticatedRoomRoomIdRouteImport } from './routes/_authenticated/room/$roomId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -52,9 +52,9 @@ const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedRoomRoute = AuthenticatedRoomRouteImport.update({
-  id: '/room/',
-  path: '/room/',
+const AuthenticatedRoomRoomIdRoute = AuthenticatedRoomRoomIdRouteImport.update({
+  id: '/room/$roomId',
+  path: '/room/$roomId',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 
@@ -65,7 +65,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/wallet': typeof AuthenticatedWalletRoute
-  '/room/': typeof AuthenticatedRoomRoute
+  '/room/$roomId': typeof AuthenticatedRoomRoomIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -74,7 +74,7 @@ export interface FileRoutesByTo {
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/wallet': typeof AuthenticatedWalletRoute
-  '/room': typeof AuthenticatedRoomRoute
+  '/room/$roomId': typeof AuthenticatedRoomRoomIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,7 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/wallet': typeof AuthenticatedWalletRoute
-  '/_authenticated/room/': typeof AuthenticatedRoomRoute
+  '/_authenticated/room/$roomId': typeof AuthenticatedRoomRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,9 +96,16 @@ export interface FileRouteTypes {
     | '/home'
     | '/profile'
     | '/wallet'
-    | '/room/'
+    | '/room/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/discover' | '/home' | '/profile' | '/wallet' | '/room'
+  to:
+    | '/'
+    | '/login'
+    | '/discover'
+    | '/home'
+    | '/profile'
+    | '/wallet'
+    | '/room/$roomId'
   id:
     | '__root__'
     | '/'
@@ -108,7 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/home'
     | '/_authenticated/profile'
     | '/_authenticated/wallet'
-    | '/_authenticated/room/'
+    | '/_authenticated/room/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -168,11 +175,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDiscoverRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/room/': {
-      id: '/_authenticated/room/'
-      path: '/room'
-      fullPath: '/room/'
-      preLoaderRoute: typeof AuthenticatedRoomRouteImport
+    '/_authenticated/room/$roomId': {
+      id: '/_authenticated/room/$roomId'
+      path: '/room/$roomId'
+      fullPath: '/room/$roomId'
+      preLoaderRoute: typeof AuthenticatedRoomRoomIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
@@ -183,7 +190,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedWalletRoute: typeof AuthenticatedWalletRoute
-  AuthenticatedRoomRoute: typeof AuthenticatedRoomRoute
+  AuthenticatedRoomRoomIdRoute: typeof AuthenticatedRoomRoomIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -191,7 +198,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedWalletRoute: AuthenticatedWalletRoute,
-  AuthenticatedRoomRoute: AuthenticatedRoomRoute,
+  AuthenticatedRoomRoomIdRoute: AuthenticatedRoomRoomIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
