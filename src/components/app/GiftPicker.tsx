@@ -21,12 +21,12 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
   }, []);
 
   const send = async () => {
-    if (!user || !selected || !targetUserId) return;
-    if (targetUserId === user.id) { toast.error("Kendine hediye gönderemezsin"); return; }
+    if (!user || !selected) return;
+    const receiver = targetUserId ?? user.id;
     if ((profile?.coin_balance ?? 0) < selected.cost) { toast.error("Yetersiz bakiye"); return; }
     setSending(true);
     const { error } = await supabase.from("gift_transactions").insert({
-      room_id: roomId, sender_id: user.id, receiver_id: targetUserId,
+      room_id: roomId, sender_id: user.id, receiver_id: receiver,
       gift_id: selected.id, amount: 1, total_cost: selected.cost,
     });
     setSending(false);
@@ -44,9 +44,10 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
             <span className="flex items-center gap-1 text-gold text-sm"><Coins className="size-4" />{profile?.coin_balance ?? 0}</span>
           </SheetTitle>
         </SheetHeader>
-        {!targetUserId && <p className="text-sm text-muted-foreground text-center py-6">Önce bir koltuktaki kullanıcıyı seç.</p>}
-        {targetUserId && (
-          <>
+        <p className="text-[11px] text-muted-foreground text-center mt-2">
+          {targetUserId ? "Seçili koltuğa gönderiliyor" : "Alıcı seçilmedi — kendine gönderilecek"}
+        </p>
+        <>
             <div className="grid grid-cols-3 gap-2 mt-4">
               {gifts.map(g => (
                 <button key={g.id} onClick={()=>setSelected(g)} className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition ${selected?.id===g.id?"bg-gradient-primary border-transparent shadow-glow":"bg-secondary border-border"}`}>
@@ -61,8 +62,7 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
             <button disabled={!selected || sending} onClick={send} className="mt-5 w-full bg-gradient-primary text-primary-foreground py-3.5 rounded-2xl text-sm font-semibold shadow-glow disabled:opacity-50">
               {sending ? "..." : selected ? `${selected.cost} Coin ile Gönder` : "Hediye seç"}
             </button>
-          </>
-        )}
+        </>
       </SheetContent>
     </Sheet>
   );
