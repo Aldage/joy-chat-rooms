@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
-import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins } from "lucide-react";
+import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -25,8 +25,11 @@ function RoomPage() {
   const [target, setTarget] = useState<string | null>(null);
   const [fx, setFx] = useState<GiftFx[]>([]);
   const [micOn, setMicOn] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
+  const audioCtx = useRef<AudioContext | null>(null);
+  const rafId = useRef<number | null>(null);
 
   const loadAll = async () => {
     const { data: r } = await supabase.from("rooms").select("*").eq("id", roomId).maybeSingle();
@@ -79,7 +82,11 @@ function RoomPage() {
   const toggleMic = async () => {
     if (micOn) {
       localStream.current?.getTracks().forEach(t => t.stop());
-      localStream.current = null; setMicOn(false);
+      localStream.current = null;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      audioCtx.current?.close().catch(()=>{});
+      audioCtx.current = null;
+      setMicOn(false); setSpeaking(false);
       const seat = seats.find(s => s.user_id === user?.id);
       if (seat) await supabase.from("room_seats").update({ is_muted: true }).eq("id", seat.id);
       return;
@@ -89,7 +96,25 @@ function RoomPage() {
       setMicOn(true);
       const seat = seats.find(s => s.user_id === user?.id);
       if (seat) await supabase.from("room_seats").update({ is_muted: false }).eq("id", seat.id);
-      toast.success("Mikrofon açık (LiveKit yakında)");
+      // Konuşma tespiti (yerel analiz — ses dışarı gitmiyor)
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+      const ctx = new Ctx();
+      audioCtx.current = ctx;
+      const src = ctx.createMediaStreamSource(localStream.current);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / buf.length);
+        setSpeaking(rms > 0.04);
+        rafId.current = requestAnimationFrame(tick);
+      };
+      tick();
+      toast.success("Mikrofon açık 🎤");
     } catch { toast.error("Mikrofon izni reddedildi"); }
   };
 
@@ -101,6 +126,24 @@ function RoomPage() {
     const current = seats.find(x => x.user_id === user.id);
     if (current) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", current.id);
     await supabase.from("room_seats").update({ user_id: user.id, is_muted: true }).eq("id", s.id);
+    toast.success(`#${s.seat_index + 1} koltuğuna oturdun`);
+  };
+
+  const leaveSeat = async (s?: SeatLite) => {
+    if (!user) return;
+    const seat = s ?? seats.find(x => x.user_id === user.id);
+    if (!seat) return;
+    // mic kapat
+    if (micOn) {
+      localStream.current?.getTracks().forEach(t => t.stop());
+      localStream.current = null;
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      audioCtx.current?.close().catch(()=>{});
+      audioCtx.current = null;
+      setMicOn(false); setSpeaking(false);
+    }
+    await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", seat.id);
+    toast.message("Koltuktan kalktın");
   };
 
   const sendMsg = async () => {
@@ -120,9 +163,18 @@ function RoomPage() {
   };
 
   // leave on unmount
-  useEffect(() => () => { localStream.current?.getTracks().forEach(t => t.stop()); }, []);
+  useEffect(() => () => {
+    localStream.current?.getTracks().forEach(t => t.stop());
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    audioCtx.current?.close().catch(()=>{});
+  }, []);
 
   const mySeat = seats.find(s => s.user_id === user?.id);
+
+  // mySeat üzerinde konuşma göstergesini yerelde yansıt
+  const seatsView = seats.map(s =>
+    s.user_id && s.user_id === user?.id ? { ...s, speaking: speaking && micOn, is_muted: !micOn } : s
+  );
 
   return (
     <div className="bg-gradient-hero min-h-screen flex flex-col">
@@ -147,12 +199,21 @@ function RoomPage() {
       {/* Seats */}
       <div className="py-4">
         <SeatGrid
-          seats={seats}
+          seats={seatsView}
           ownerId={room?.owner_id ?? ""}
+          currentUserId={user?.id}
           onSeatClick={takeSeat}
+          onLeaveSeat={leaveSeat}
           onSelectTarget={(uid) => { setTarget(uid); setOpenGift(true); }}
           targetUserId={target}
         />
+        {mySeat && (
+          <div className="flex justify-center mt-3">
+            <button onClick={() => leaveSeat()} className="flex items-center gap-1.5 text-xs font-semibold bg-card border border-border rounded-full px-3 py-1.5 hover:bg-secondary">
+              <LogOut className="size-3" /> Koltuktan Kalk
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Chat */}
@@ -198,9 +259,21 @@ function RoomPage() {
         <button onClick={sendMsg} className="size-11 rounded-full bg-gradient-primary shadow-glow flex items-center justify-center">
           <Send className="size-4 text-primary-foreground" />
         </button>
-        {mySeat && (
+        {mySeat ? (
           <button onClick={toggleMic} className={`size-11 rounded-full flex items-center justify-center border ${micOn?"bg-gradient-primary shadow-glow border-transparent":"bg-card border-border"}`}>
             {micOn ? <Mic className="size-4 text-primary-foreground" /> : <MicOff className="size-4 text-muted-foreground" />}
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              const empty = seats.find(s => !s.user_id && !s.is_locked);
+              if (empty) takeSeat(empty);
+              else toast.error("Boş koltuk yok");
+            }}
+            className="size-11 rounded-full bg-card border border-border flex items-center justify-center"
+            title="Koltuğa otur"
+          >
+            <Hand className="size-4 text-foreground" />
           </button>
         )}
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
