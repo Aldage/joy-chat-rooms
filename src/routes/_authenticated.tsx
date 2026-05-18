@@ -1,0 +1,37 @@
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { BottomNav } from "@/components/app/BottomNav";
+import { Sparkles } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated")({
+  component: AuthenticatedLayout,
+});
+
+function AuthenticatedLayout() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/" });
+  }, [loading, user, navigate]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <div className="size-16 rounded-2xl bg-gradient-primary shadow-glow flex items-center justify-center animate-pulse">
+          <Sparkles className="size-8 text-primary-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen w-full bg-background mx-auto max-w-md">
+      <div className="pb-28">
+        <Outlet />
+      </div>
+      <BottomNav />
+    </div>
+  );
+}
