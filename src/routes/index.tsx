@@ -1,12 +1,15 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async () => {
-    if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/home" });
-    throw redirect({ to: "/login" });
-  },
-  component: () => null,
+  component: EntryScreen,
 });
+
+function EntryScreen() {
+  return (
+    <main className="min-h-screen w-full bg-primary flex items-center justify-center px-6">
+      <button className="min-h-16 rounded-2xl bg-foreground px-10 text-2xl font-display font-bold text-background shadow-glow">
+        GİRİŞ YAP
+      </button>
+    </main>
+  );
+}
