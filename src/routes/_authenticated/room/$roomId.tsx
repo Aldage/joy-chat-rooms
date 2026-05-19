@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
-import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand } from "lucide-react";
+import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -26,6 +26,9 @@ function RoomPage() {
   const [fx, setFx] = useState<GiftFx[]>([]);
   const [micOn, setMicOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [modSeat, setModSeat] = useState<SeatLite | null>(null);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwInput, setPwInput] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
@@ -170,6 +173,37 @@ function RoomPage() {
   }, []);
 
   const mySeat = seats.find(s => s.user_id === user?.id);
+  const isRoomOwner = !!user && !!room && user.id === room.owner_id;
+
+  const toggleLock = async (s: SeatLite) => {
+    if (!isRoomOwner) return;
+    await supabase.from("room_seats").update({ is_locked: !s.is_locked }).eq("id", s.id);
+    toast.success(s.is_locked ? `#${s.seat_index + 1} koltuğu açıldı` : `#${s.seat_index + 1} koltuğu kilitlendi 🔒`);
+  };
+
+  const muteSeat = async (s: SeatLite) => {
+    if (!isRoomOwner || !s.user_id) return;
+    await supabase.from("room_seats").update({ is_muted: !s.is_muted }).eq("id", s.id);
+    toast.message(s.is_muted ? "Mikrofon açıldı" : "Kullanıcı susturuldu 🔇");
+    setModSeat(null);
+  };
+
+  const kickSeat = async (s: SeatLite) => {
+    if (!isRoomOwner || !s.user_id) return;
+    await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", s.id);
+    toast.success(`${s.user?.display_name ?? "Kullanıcı"} odadan atıldı`);
+    setModSeat(null);
+  };
+
+  const savePassword = async (val: string | null) => {
+    if (!isRoomOwner) return;
+    if (val && !/^\d{4}$/.test(val)) { toast.error("Şifre 4 haneli olmalı"); return; }
+    const { error } = await supabase.from("rooms").update({ password: val }).eq("id", roomId);
+    if (error) { toast.error("Şifre kaydedilemedi"); return; }
+    setRoom((r: any) => ({ ...r, password: val }));
+    setPwOpen(false); setPwInput("");
+    toast.success(val ? "Oda şifrelendi 🔐" : "Şifre kaldırıldı");
+  };
 
   // mySeat üzerinde konuşma göstergesini yerelde yansıt
   const seatsView = seats.map(s =>
@@ -188,8 +222,14 @@ function RoomPage() {
           <p className="text-[11px] text-muted-foreground flex items-center gap-2">
             <span className="bg-live text-white px-1.5 py-0.5 rounded text-[9px] font-bold">LIVE</span>
             <Users className="size-3" /> {seats.filter(s => s.user_id).length}/{seats.length}
+            {room?.password && <span className="flex items-center gap-0.5 text-gold"><Lock className="size-3" /> Şifreli</span>}
           </p>
         </div>
+        {isRoomOwner && (
+          <button onClick={() => { setPwInput(room?.password ?? ""); setPwOpen(true); }} className="size-10 rounded-full bg-card border border-border flex items-center justify-center" title="Odayı şifrele">
+            <Shield className={`size-4 ${room?.password ? "text-gold" : "text-foreground"}`} />
+          </button>
+        )}
         <div className="flex items-center gap-1 bg-card border border-border rounded-full px-3 py-1.5">
           <Coins className="size-3.5 text-gold" />
           <span className="text-xs font-semibold">{profile?.coin_balance ?? 0}</span>
@@ -205,6 +245,8 @@ function RoomPage() {
           onSeatClick={takeSeat}
           onLeaveSeat={leaveSeat}
           onSelectTarget={(uid) => { setTarget(uid); setOpenGift(true); }}
+          onToggleLock={toggleLock}
+          onModerate={(s) => setModSeat(s)}
           targetUserId={target}
         />
         {mySeat && (
@@ -282,6 +324,76 @@ function RoomPage() {
       </footer>
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
+
+      {/* Moderation popover */}
+      {modSeat && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 backdrop-blur-sm animate-fade-in" onClick={() => setModSeat(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm bg-card border border-border rounded-t-3xl p-5 pb-8 shadow-glow animate-scale-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="size-12 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-display font-bold">
+                {modSeat.user?.display_name?.[0]?.toUpperCase() ?? "?"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-semibold truncate">{modSeat.user?.display_name ?? "Kullanıcı"}</p>
+                <p className="text-[11px] text-muted-foreground">Koltuk #{modSeat.seat_index + 1}</p>
+              </div>
+              <button onClick={() => setModSeat(null)} className="size-8 rounded-full bg-secondary flex items-center justify-center">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <button onClick={() => muteSeat(modSeat)} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-secondary hover:bg-secondary/80 transition">
+                <VolumeX className="size-4 text-foreground" />
+                <span className="text-sm font-semibold">{modSeat.is_muted ? "Susturmayı Kaldır" : "Mikrofonunu Sustur"}</span>
+              </button>
+              <button onClick={() => toggleLock(modSeat)} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-secondary hover:bg-secondary/80 transition">
+                {modSeat.is_locked ? <Unlock className="size-4" /> : <Lock className="size-4" />}
+                <span className="text-sm font-semibold">{modSeat.is_locked ? "Koltuğu Aç" : "Koltuğu Kilitle"}</span>
+              </button>
+              <button onClick={() => kickSeat(modSeat)} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-destructive/15 hover:bg-destructive/25 transition text-destructive">
+                <UserX className="size-4" />
+                <span className="text-sm font-semibold">Odadan At (Kick)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password dialog */}
+      {pwOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm animate-fade-in p-4" onClick={() => setPwOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm bg-card border border-border rounded-3xl p-6 shadow-glow animate-scale-in">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="size-10 rounded-full bg-gradient-primary flex items-center justify-center">
+                <Shield className="size-5 text-primary-foreground" />
+              </div>
+              <div>
+                <p className="font-display font-bold">Odayı Şifrele</p>
+                <p className="text-[11px] text-muted-foreground">4 haneli giriş şifresi belirle</p>
+              </div>
+            </div>
+            <input
+              autoFocus
+              inputMode="numeric"
+              maxLength={4}
+              value={pwInput}
+              onChange={(e) => setPwInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
+              className="mt-5 w-full text-center text-3xl tracking-[0.6em] font-display font-bold bg-secondary border border-border rounded-2xl py-4 focus:outline-none focus:border-primary"
+            />
+            <div className="flex gap-2 mt-5">
+              {room?.password && (
+                <button onClick={() => savePassword(null)} className="flex-1 py-3 rounded-2xl bg-secondary text-sm font-semibold hover:bg-secondary/80">
+                  Şifreyi Kaldır
+                </button>
+              )}
+              <button onClick={() => savePassword(pwInput)} disabled={pwInput.length !== 4} className="flex-1 py-3 rounded-2xl bg-gradient-primary text-primary-foreground text-sm font-bold shadow-glow disabled:opacity-50 disabled:cursor-not-allowed">
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
