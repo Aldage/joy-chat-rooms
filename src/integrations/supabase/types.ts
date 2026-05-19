@@ -203,6 +203,7 @@ export type Database = {
           id: string
           is_active: boolean
           owner_id: string
+          password: string | null
           seat_count: number
           tag: string | null
           title: string
@@ -214,6 +215,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           owner_id: string
+          password?: string | null
           seat_count?: number
           tag?: string | null
           title: string
@@ -225,6 +227,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           owner_id?: string
+          password?: string | null
           seat_count?: number
           tag?: string | null
           title?: string
