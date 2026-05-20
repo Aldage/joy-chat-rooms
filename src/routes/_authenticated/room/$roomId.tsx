@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
+import { PussCat } from "@/components/app/PussCat";
 import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -83,11 +84,11 @@ function RoomPage() {
           ? "kendine"
           : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
-        if (g?.name === "Yavru Kedi") {
+        if (g?.name === "Masum Kedi" || g?.name === "Yavru Kedi") {
           setKittens(prev => [...prev, { id, from: fromName }]);
-          setTimeout(() => setKittens(prev => prev.filter(k => k.id !== id)), 3100);
+          setTimeout(() => setKittens(prev => prev.filter(k => k.id !== id)), 3000);
           const cid = crypto.randomUUID();
-          setChatFx(prev => [...prev, { id: cid, text: `${fromName} odaya sevimli bir yavru kedi saldı! 🐾` }]);
+          setChatFx(prev => [...prev, { id: cid, text: `${fromName} odaya dünyalar tatlısı bir kedi saldı! 🐾` }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
           playMeow();
         } else {
@@ -404,15 +405,10 @@ function RoomPage() {
         ))}
       </div>
 
-      {/* Kitten FX overlay */}
+      {/* Premium Masum Kedi FX overlay */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-40">
         {kittens.map(k => (
-          <div key={k.id} className="kitten-pop text-center">
-            <div className="text-[120px] leading-none drop-shadow-[0_0_30px_rgba(255,182,193,0.8)]">🐱</div>
-            <p className="mt-2 text-sm font-display font-bold text-primary-foreground bg-gradient-primary px-4 py-1.5 rounded-full shadow-glow">
-              {k.from} → Miyaaav! 🐾
-            </p>
-          </div>
+          <PussCat key={k.id} from={k.from} />
         ))}
       </div>
 
@@ -452,8 +448,8 @@ function RoomPage() {
       {chestReady && !chestClosed && (
         <div className="pointer-events-none fixed top-44 left-1/2 -translate-x-1/2 z-30 animate-scale-in">
           <div className="bg-gradient-to-r from-accent via-primary to-accent px-5 py-2 rounded-full shadow-glow">
-            <p className="text-sm font-display font-extrabold text-primary-foreground glow-text">
-              🎁 İlk Tıklayan Kapar!
+            <p className="text-sm font-display font-extrabold text-primary-foreground glow-text whitespace-nowrap">
+              🎁 İTTİFAK HEDİYESİ: İLK TIKLAYAN KAPAR!
             </p>
           </div>
         </div>
