@@ -102,6 +102,41 @@ function RoomPage() {
 
   useEffect(() => { loadAll(); }, [roomId]);
 
+  // Welcome bot + periodic tips (local-only system messages)
+  useEffect(() => {
+    if (!room || !user || welcomedRef.current) return;
+    welcomedRef.current = true;
+    const name = profile?.display_name ?? "Misafir";
+    const welcome: Msg = {
+      id: `bot-welcome-${Date.now()}`,
+      user_id: "__system__",
+      content: `🤖 Sistem Botu: Hoş geldin ${name}! Koltuklardan birine oturup sohbete katılabilir veya şansını zarda deneyebilirsin! 🎲`,
+      message_type: "system",
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, welcome]);
+
+    const TIPS = [
+      "🎁 İpucu: Mağazadan havalı bir çerçeve alarak odada fark yaratabilirsin!",
+      "⚔️ İpucu: PK Savaşı'nda hediye göndererek takımına puan kazandır!",
+      "🎲 İpucu: Zar oyunundan çift gelirse coinin katlanır — şansını dene!",
+      "🔥 İpucu: Bedava kalpler tuşuyla odayı trendlere taşıyabilirsin!",
+      "👑 İpucu: VIP rozetli kullanıcılar her hediyede ekstra XP kazanır.",
+    ];
+    let i = 0;
+    const tipTimer = setInterval(() => {
+      const tip = TIPS[i % TIPS.length]; i++;
+      setMessages(prev => [...prev, {
+        id: `bot-tip-${Date.now()}-${i}`,
+        user_id: "__system__",
+        content: `🤖 ${tip}`,
+        message_type: "system",
+        created_at: new Date().toISOString(),
+      } as Msg]);
+    }, 120000);
+    return () => clearInterval(tipTimer);
+  }, [room?.id, user?.id, profile?.display_name]);
+
   // realtime
   useEffect(() => {
     const ch = supabase.channel(`room:${roomId}`)
