@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
-import { PussCat } from "./PussCat";
-import { DesertDancer } from "./DesertDancer";
-import { BearHug } from "./BearHug";
-import { PaperPlane } from "./PaperPlane";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 export type PremiumGiftKind = "puss" | "dancer" | "bear" | "plane";
@@ -16,19 +12,32 @@ export type GiftEvent = {
   emoji: string;
 };
 
+/**
+ * Media registry — swap these URLs for your own ultra-premium transparent
+ * WebM / GIF assets later. Supported: .webm/.mp4 → <video>, others → <img>.
+ */
+export const GIFT_MEDIA: Record<PremiumGiftKind, string> = {
+  puss:   "https://media.tenor.com/CIYnRq0iD2QAAAAi/cat-cute.gif",
+  dancer: "https://media.tenor.com/zVgMTBxXAvIAAAAi/dance-belly-dance.gif",
+  bear:   "https://media.tenor.com/jr3vQ2hd83gAAAAi/hugs-bear-hug.gif",
+  plane:  "https://media.tenor.com/wM5jU_5gI50AAAAi/paper-airplane.gif",
+};
+
 const DURATION = 3400;
+const isVideo = (url: string) => /\.(webm|mp4|mov)(\?|$)/i.test(url);
 
 /**
  * Full-screen premium gift overlay.
- * - z-index 9999, pointer-events none (interaction passes through).
- * - Internal FIFO queue so gifts never overlap.
- * - Top luxury banner slides in, center stage hosts the SVG animation.
+ * - z-index 9999, pointer-events none (clicks pass through).
+ * - FIFO queue — only one animation plays at a time.
+ * - Renders an <img>/<video> media container; replace URLs in GIFT_MEDIA for production.
  */
 export function GiftOverlay({ events, onConsumed }: {
   events: GiftEvent[];
   onConsumed: (id: string) => void;
 }) {
   const [active, setActive] = useState<GiftEvent | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Pull next event from the queue whenever stage is free
   useEffect(() => {
@@ -42,7 +51,16 @@ export function GiftOverlay({ events, onConsumed }: {
     return () => clearTimeout(t);
   }, [active, events, onConsumed]);
 
+  // Autoplay safety: some browsers need explicit play()
+  useEffect(() => {
+    if (!active) return;
+    const v = videoRef.current;
+    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+  }, [active]);
+
   if (!active) return null;
+
+  const url = GIFT_MEDIA[active.kind];
 
   return (
     <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 9999 }}>
@@ -51,7 +69,6 @@ export function GiftOverlay({ events, onConsumed }: {
         <div className="relative flex items-center gap-3 rounded-2xl px-3 py-2 shadow-[0_10px_40px_-8px_rgba(120,80,255,0.65)]
                         bg-gradient-to-r from-[oklch(0.35_0.18_260)] via-[oklch(0.45_0.22_290)] to-[oklch(0.4_0.2_330)]
                         border border-[oklch(0.78_0.18_300/0.45)] overflow-hidden">
-          {/* Shine sweep */}
           <span className="absolute inset-0 gift-banner-shine pointer-events-none" />
           <div className="size-9 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-xl shrink-0">
             {active.emoji}
@@ -77,12 +94,28 @@ export function GiftOverlay({ events, onConsumed }: {
         </div>
       </div>
 
-      {/* Center stage */}
+      {/* Full-screen media stage */}
       <div className="absolute inset-0 flex items-center justify-center gift-stage-in">
-        {active.kind === "puss"   && <PussCat      from={active.from} />}
-        {active.kind === "dancer" && <DesertDancer from={active.from} />}
-        {active.kind === "bear"   && <BearHug      from={active.from} />}
-        {active.kind === "plane"  && <PaperPlane   from={active.from} />}
+        <div className="relative w-full h-full flex items-center justify-center">
+          {isVideo(url) ? (
+            <video
+              ref={videoRef}
+              key={active.id}
+              src={url}
+              autoPlay
+              muted
+              playsInline
+              className="max-w-[92vw] max-h-[70vh] object-contain drop-shadow-[0_20px_60px_rgba(180,80,255,0.55)]"
+            />
+          ) : (
+            <img
+              key={active.id}
+              src={url}
+              alt={active.giftName}
+              className="max-w-[92vw] max-h-[70vh] object-contain drop-shadow-[0_20px_60px_rgba(180,80,255,0.55)]"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
