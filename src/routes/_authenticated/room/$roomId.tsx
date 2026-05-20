@@ -390,7 +390,15 @@ function RoomPage() {
 
       {/* Chat */}
       <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2 no-scrollbar">
-        {messages.map(m => (
+        {messages.map(m => m.user_id === "__system__" ? (
+          <div key={m.id} className="flex justify-center">
+            <p className="text-[12px] font-display font-bold text-center text-gold glow-text
+                          bg-gradient-to-r from-primary/20 via-accent/25 to-primary/20
+                          border border-accent/40 rounded-full px-3 py-1 max-w-full break-words">
+              {m.content}
+            </p>
+          </div>
+        ) : (
           <div key={m.id} className="flex items-start gap-2">
             <div className="size-7 rounded-full bg-gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0">
               {profiles[m.user_id]?.display_name?.[0]?.toUpperCase() ?? "?"}
