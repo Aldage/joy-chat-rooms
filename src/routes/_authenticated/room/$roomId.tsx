@@ -140,6 +140,12 @@ function RoomPage() {
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
         const cost = g?.cost ?? tx.total_cost ?? 0;
+        // PK: determine team via sender's seat index (even=blue, odd=red). Fallback: alternate.
+        const senderSeat = seats.find(x => x.user_id === tx.sender_id);
+        const team: "blue" | "red" = senderSeat
+          ? senderSeat.seat_index % 2 === 0 ? "blue" : "red"
+          : Math.random() < 0.5 ? "blue" : "red";
+        pkRef.current?.addContribution(team, cost || 1);
         // Mega full-screen FX for high-tier gifts (Luxury Car & up: cost >= 1000)
         if (cost >= 1000) {
           setMegaGift({
