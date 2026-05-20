@@ -4,13 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Shield, Trash2, UserX, Users, DoorOpen, Loader2 } from "lucide-react";
+import { Shield, Trash2, UserX, Users, DoorOpen, Loader2, Crown, UserMinus, Search } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { deleteUserAccount } from "@/lib/admin.functions";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: AdminPage });
 
 type Room = { id: string; title: string; tag: string | null; popularity: number; owner_id: string; created_at: string };
 type Seat = { id: string; room_id: string; seat_index: number; user_id: string | null };
 type Profile = { id: string; display_name: string; avatar_url: string | null };
+type RoleRow = { user_id: string; role: string };
 
 function AdminPage() {
   const { user } = useAuth();
@@ -20,6 +24,11 @@ function AdminPage() {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
+  const [vips, setVips] = useState<Profile[]>([]);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const deleteUserFn = useServerFn(deleteUserAccount);
 
   useEffect(() => {
     if (!user) return;
@@ -44,10 +53,31 @@ function AdminPage() {
       (p ?? []).forEach((x: any) => { map[x.id] = x; });
       setProfiles(map);
     }
+    await loadVips();
     setLoading(false);
   };
 
+  const loadVips = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "vip");
+    const ids = (roles ?? []).map((r: any) => r.user_id);
+    if (!ids.length) { setVips([]); return; }
+    const { data: p } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids);
+    setVips((p ?? []) as Profile[]);
+  };
+
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || search.trim().length < 2) { setSearchResults([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from("profiles")
+        .select("id, display_name, avatar_url")
+        .ilike("display_name", `%${search.trim()}%`)
+        .limit(10);
+      setSearchResults((data ?? []) as Profile[]);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, isAdmin]);
 
   const deleteRoom = async (id: string) => {
     if (!confirm("Bu odayı silmek istediğine emin misin?")) return;
@@ -63,6 +93,40 @@ function AdminPage() {
     if (error) return toast.error(error.message);
     toast.success("Kullanıcı atıldı");
     setSeats((prev) => prev.filter((s) => s.id !== seatId));
+  };
+
+  const grantVip = async (uid: string, name: string) => {
+    setBusy(uid);
+    const { error } = await supabase.from("user_roles").insert({ user_id: uid, role: "vip" as any });
+    setBusy(null);
+    if (error && !error.message.includes("duplicate")) return toast.error(error.message);
+    toast.success(`👑 ${name} artık VIP`);
+    loadVips();
+  };
+
+  const revokeVip = async (uid: string, name: string) => {
+    if (!confirm(`${name} kullanıcısının VIP statüsü kaldırılsın mı?`)) return;
+    setBusy(uid);
+    const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", "vip" as any);
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success(`${name} VIP'den çıkarıldı`);
+    setVips((prev) => prev.filter((v) => v.id !== uid));
+  };
+
+  const deleteUser = async (uid: string, name: string) => {
+    if (!confirm(`⚠️ ${name} hesabı KALICI olarak silinecek. Emin misin?`)) return;
+    setBusy(uid);
+    try {
+      await deleteUserFn({ data: { userId: uid } });
+      toast.success(`${name} silindi`);
+      setVips((prev) => prev.filter((v) => v.id !== uid));
+      setSearchResults((prev) => prev.filter((v) => v.id !== uid));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Silinemedi");
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (isAdmin === null) {
@@ -139,6 +203,67 @@ function AdminPage() {
             </div>
           );
         })}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Crown className="size-4 text-amber-400" /> VIP Yönetimi ({vips.length})
+        </h2>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Kullanıcı ara (isim)..."
+            className="pl-9"
+          />
+        </div>
+
+        {searchResults.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-2 space-y-1">
+            <p className="text-xs text-muted-foreground px-2 py-1">Arama sonuçları</p>
+            {searchResults.map((u) => {
+              const isVip = vips.some((v) => v.id === u.id);
+              return (
+                <div key={u.id} className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/50">
+                  {u.avatar_url && <img src={u.avatar_url} alt="" className="size-7 rounded-full" />}
+                  <span className="flex-1 truncate text-sm">{u.display_name}</span>
+                  {isVip ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-amber-500/20 text-amber-400">VIP</span>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => grantVip(u.id, u.display_name)}>
+                      <Crown className="size-3.5" /> VIP Yap
+                    </Button>
+                  )}
+                  <Button size="sm" variant="destructive" disabled={busy === u.id || u.id === user?.id} onClick={() => deleteUser(u.id, u.display_name)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {vips.length === 0 && <p className="text-sm text-muted-foreground">Henüz VIP kullanıcı yok. Yukarıdan ara ve VIP yap.</p>}
+        {vips.map((v) => (
+          <div key={v.id} className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-card p-3 flex items-center gap-3">
+            {v.avatar_url && <img src={v.avatar_url} alt="" className="size-10 rounded-full ring-2 ring-amber-400/50" />}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold truncate">{v.display_name}</span>
+                <Crown className="size-3.5 text-amber-400" />
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">#{v.id.slice(0, 8)}</p>
+            </div>
+            <Button size="sm" variant="outline" disabled={busy === v.id} onClick={() => revokeVip(v.id, v.display_name)}>
+              <UserMinus className="size-3.5" /> VIP Kaldır
+            </Button>
+            <Button size="sm" variant="destructive" disabled={busy === v.id || v.id === user?.id} onClick={() => deleteUser(v.id, v.display_name)}>
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        ))}
       </section>
     </div>
   );
