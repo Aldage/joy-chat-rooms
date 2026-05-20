@@ -4,10 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
-import { PussCat } from "@/components/app/PussCat";
-import { DesertDancer } from "@/components/app/DesertDancer";
-import { BearHug } from "@/components/app/BearHug";
-import { PaperPlane } from "@/components/app/PaperPlane";
+import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
 import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +13,6 @@ export const Route = createFileRoute("/_authenticated/room/$roomId")({ component
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 type ChatFx = { id: string; text: string };
-type KittenFx = { id: string; from: string; kind: "puss" | "dancer" | "bear" | "plane" };
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -31,7 +27,7 @@ function RoomPage() {
   const [target, setTarget] = useState<string | null>(null);
   const [fx, setFx] = useState<GiftFx[]>([]);
   const [chatFx, setChatFx] = useState<ChatFx[]>([]);
-  const [kittens, setKittens] = useState<KittenFx[]>([]);
+  const [giftQueue, setGiftQueue] = useState<GiftEvent[]>([]);
   // Chest
   const [chestProgress, setChestProgress] = useState(0);
   const [chestReady, setChestReady] = useState(false);
@@ -88,22 +84,26 @@ function RoomPage() {
           : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
-        const premiumKind: KittenFx["kind"] | null =
+        const premiumKind: PremiumGiftKind | null =
           name === "Masum Kedi" || name === "Yavru Kedi" ? "puss" :
           name === "Çöl Dansçısı" ? "dancer" :
           name === "Ayıcık Kucağı" ? "bear" :
           name === "Kağıt Uçak Yolculuğu" ? "plane" : null;
         if (premiumKind) {
-          setKittens(prev => [...prev, { id, from: fromName, kind: premiumKind }]);
-          setTimeout(() => setKittens(prev => prev.filter(k => k.id !== id)), 3000);
+          setGiftQueue(prev => [...prev, {
+            id, kind: premiumKind, from: fromName, to: toName,
+            giftName: name, emoji: g?.emoji ?? "🎁",
+          }]);
           const cid = crypto.randomUUID();
-          const chatText =
-            premiumKind === "puss"   ? `${fromName} odaya dünyalar tatlısı bir kedi saldı! 🐾` :
-            premiumKind === "dancer" ? `${fromName} odaya Çöl Dansçısı hediyesiyle renk kattı! 💃` :
-            premiumKind === "bear"   ? `${fromName} odaya sevgi dolu bir kucaklama gönderdi! 🧸` :
-                                       `${fromName} odayı göklerde uçurdu! ✈️`;
+          const chatText = `Sistem: ${fromName}, ${toName}'ya dünyalar tatlısı bir ${name} armağan etti! ✨`;
           setChatFx(prev => [...prev, { id: cid, text: chatText }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
+          // Inject a styled system message into the chat stream (local only)
+          const sysId = `sys-${id}`;
+          setMessages(prev => [...prev, {
+            id: sysId, user_id: "__system__", content: chatText,
+            message_type: "gift", created_at: new Date().toISOString(),
+          } as Msg]);
           playMeow();
         } else {
           setFx(prev => [...prev, { id, emoji: g?.emoji ?? "🎁", from: fromName, to: toName, giftName: g?.name ?? "Hediye" }]);
@@ -390,7 +390,15 @@ function RoomPage() {
 
       {/* Chat */}
       <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2 no-scrollbar">
-        {messages.map(m => (
+        {messages.map(m => m.user_id === "__system__" ? (
+          <div key={m.id} className="flex justify-center">
+            <p className="text-[12px] font-display font-bold text-center text-gold glow-text
+                          bg-gradient-to-r from-primary/20 via-accent/25 to-primary/20
+                          border border-accent/40 rounded-full px-3 py-1 max-w-full break-words">
+              {m.content}
+            </p>
+          </div>
+        ) : (
           <div key={m.id} className="flex items-start gap-2">
             <div className="size-7 rounded-full bg-gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0">
               {profiles[m.user_id]?.display_name?.[0]?.toUpperCase() ?? "?"}
@@ -419,15 +427,11 @@ function RoomPage() {
         ))}
       </div>
 
-      {/* Premium Masum Kedi FX overlay */}
-      <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-40">
-        {kittens.map(k => {
-          if (k.kind === "dancer") return <DesertDancer key={k.id} from={k.from} />;
-          if (k.kind === "bear")   return <BearHug      key={k.id} from={k.from} />;
-          if (k.kind === "plane")  return <PaperPlane   key={k.id} from={k.from} />;
-          return <PussCat key={k.id} from={k.from} />;
-        })}
-      </div>
+      {/* Premium full-screen gift overlay (queued) */}
+      <GiftOverlay
+        events={giftQueue}
+        onConsumed={(id) => setGiftQueue(prev => prev.filter(e => e.id !== id))}
+      />
 
       {/* Glowing chat fx (kitten announcement) */}
       <div className="pointer-events-none fixed left-0 right-0 top-28 z-30 flex flex-col items-center gap-1 px-4">
