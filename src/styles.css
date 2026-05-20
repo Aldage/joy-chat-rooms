@@ -389,6 +389,39 @@
 }
 
 @layer utilities {
+  /* Silky route transition */
+  @keyframes route-in {
+    0%   { opacity: 0; transform: translateY(8px) scale(0.995); filter: blur(2px); }
+    100% { opacity: 1; transform: translateY(0)   scale(1);     filter: blur(0); }
+  }
+  .animate-route-in { animation: route-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* KOIZORA wordmark shimmer (gold sweep) */
+  @keyframes koizora-shimmer {
+    0%   { background-position: -200% 50%; }
+    100% { background-position:  200% 50%; }
+  }
+  .koizora-shimmer {
+    background-image: linear-gradient(
+      110deg,
+      oklch(0.72 0.2 305) 0%,
+      oklch(0.85 0.15 305) 25%,
+      oklch(0.95 0.18 85)  45%,
+      #ffffff               50%,
+      oklch(0.95 0.18 85)  55%,
+      oklch(0.85 0.15 305) 75%,
+      oklch(0.72 0.2 305) 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: koizora-shimmer 3.2s linear infinite;
+    filter: drop-shadow(0 0 8px oklch(0.78 0.18 305 / 0.55));
+  }
+}
+
+@layer utilities {
   @keyframes profile-sheet-in {
     0%   { transform: translateY(100%); opacity: 0; }
     60%  { transform: translateY(-6px); opacity: 1; }

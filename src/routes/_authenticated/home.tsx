@@ -66,7 +66,7 @@ function HomePage() {
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.35em] font-display font-bold bg-gradient-to-r from-primary via-primary-glow to-amber-400 bg-clip-text text-transparent">KOIZORA</p>
+          <p className="text-[11px] uppercase tracking-[0.4em] font-display font-extrabold koizora-shimmer">KOIZORA</p>
           <h1 className="text-xl font-display font-bold">{profile?.display_name ?? "..."}</h1>
         </div>
         <Link to="/wallet" className="flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2 shadow-soft">

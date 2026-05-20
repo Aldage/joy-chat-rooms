@@ -7,6 +7,7 @@ import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
 import { MegaGiftFX, type MegaGift } from "@/components/app/MegaGiftFX";
 import { DiceGame } from "@/components/app/DiceGame";
+import { PKBattle, type PKBattleHandle } from "@/components/app/PKBattle";
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { useActiveRoom } from "@/lib/active-room-context";
@@ -72,6 +73,8 @@ function RoomPage() {
   // Dice & mega FX
   const [diceOpen, setDiceOpen] = useState(false);
   const [megaGift, setMegaGift] = useState<MegaGift | null>(null);
+  const pkRef = useRef<PKBattleHandle | null>(null);
+  const welcomedRef = useRef(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
@@ -98,6 +101,41 @@ function RoomPage() {
   };
 
   useEffect(() => { loadAll(); }, [roomId]);
+
+  // Welcome bot + periodic tips (local-only system messages)
+  useEffect(() => {
+    if (!room || !user || welcomedRef.current) return;
+    welcomedRef.current = true;
+    const name = profile?.display_name ?? "Misafir";
+    const welcome: Msg = {
+      id: `bot-welcome-${Date.now()}`,
+      user_id: "__system__",
+      content: `🤖 Sistem Botu: Hoş geldin ${name}! Koltuklardan birine oturup sohbete katılabilir veya şansını zarda deneyebilirsin! 🎲`,
+      message_type: "system",
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, welcome]);
+
+    const TIPS = [
+      "🎁 İpucu: Mağazadan havalı bir çerçeve alarak odada fark yaratabilirsin!",
+      "⚔️ İpucu: PK Savaşı'nda hediye göndererek takımına puan kazandır!",
+      "🎲 İpucu: Zar oyunundan çift gelirse coinin katlanır — şansını dene!",
+      "🔥 İpucu: Bedava kalpler tuşuyla odayı trendlere taşıyabilirsin!",
+      "👑 İpucu: VIP rozetli kullanıcılar her hediyede ekstra XP kazanır.",
+    ];
+    let i = 0;
+    const tipTimer = setInterval(() => {
+      const tip = TIPS[i % TIPS.length]; i++;
+      setMessages(prev => [...prev, {
+        id: `bot-tip-${Date.now()}-${i}`,
+        user_id: "__system__",
+        content: `🤖 ${tip}`,
+        message_type: "system",
+        created_at: new Date().toISOString(),
+      } as Msg]);
+    }, 120000);
+    return () => clearInterval(tipTimer);
+  }, [room?.id, user?.id, profile?.display_name]);
 
   // realtime
   useEffect(() => {
@@ -137,6 +175,12 @@ function RoomPage() {
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
         const cost = g?.cost ?? tx.total_cost ?? 0;
+        // PK: determine team via sender's seat index (even=blue, odd=red). Fallback: alternate.
+        const senderSeat = seats.find(x => x.user_id === tx.sender_id);
+        const team: "blue" | "red" = senderSeat
+          ? senderSeat.seat_index % 2 === 0 ? "blue" : "red"
+          : Math.random() < 0.5 ? "blue" : "red";
+        pkRef.current?.addContribution(team, cost || 1);
         // Mega full-screen FX for high-tier gifts (Luxury Car & up: cost >= 1000)
         if (cost >= 1000) {
           setMegaGift({
@@ -531,6 +575,9 @@ function RoomPage() {
           </span>
         </div>
       </header>
+
+      {/* PK Battle banner */}
+      <PKBattle ref={pkRef} />
 
       {/* Seats */}
       <div className="py-4">
