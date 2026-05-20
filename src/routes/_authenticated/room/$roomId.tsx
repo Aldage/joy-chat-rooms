@@ -4,13 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
-import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X } from "lucide-react";
+import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
 
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
+type ChatFx = { id: string; text: string };
+type KittenFx = { id: string; from: string };
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -24,6 +26,16 @@ function RoomPage() {
   const [openGift, setOpenGift] = useState(false);
   const [target, setTarget] = useState<string | null>(null);
   const [fx, setFx] = useState<GiftFx[]>([]);
+  const [chatFx, setChatFx] = useState<ChatFx[]>([]);
+  const [kittens, setKittens] = useState<KittenFx[]>([]);
+  // Chest
+  const [chestProgress, setChestProgress] = useState(0);
+  const [chestReady, setChestReady] = useState(false);
+  const [chestRound, setChestRound] = useState(0);
+  const [chestClosed, setChestClosed] = useState(false);
+  const winnersRef = useRef<string[]>([]);
+  const claimedRef = useRef(false);
+  const chestChanRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [micOn, setMicOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [modSeat, setModSeat] = useState<SeatLite | null>(null);
@@ -71,12 +83,115 @@ function RoomPage() {
           ? "kendine"
           : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
-        setFx(prev => [...prev, { id, emoji: g?.emoji ?? "🎁", from: fromName, to: toName, giftName: g?.name ?? "Hediye" }]);
-        setTimeout(() => setFx(prev => prev.filter(f => f.id !== id)), 2400);
+        if (g?.name === "Yavru Kedi") {
+          setKittens(prev => [...prev, { id, from: fromName }]);
+          setTimeout(() => setKittens(prev => prev.filter(k => k.id !== id)), 3100);
+          const cid = crypto.randomUUID();
+          setChatFx(prev => [...prev, { id: cid, text: `${fromName} odaya sevimli bir yavru kedi saldı! 🐾` }]);
+          setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
+          playMeow();
+        } else {
+          setFx(prev => [...prev, { id, emoji: g?.emoji ?? "🎁", from: fromName, to: toName, giftName: g?.name ?? "Hediye" }]);
+          setTimeout(() => setFx(prev => prev.filter(f => f.id !== id)), 2400);
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [roomId, profiles]);
+
+  // Meow synth
+  const playMeow = () => {
+    try {
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sawtooth";
+      const t0 = ctx.currentTime;
+      o.frequency.setValueAtTime(520, t0);
+      o.frequency.exponentialRampToValueAtTime(820, t0 + 0.18);
+      o.frequency.exponentialRampToValueAtTime(340, t0 + 0.55);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+      o.connect(g).connect(ctx.destination);
+      o.start(t0); o.stop(t0 + 0.65);
+      setTimeout(() => ctx.close().catch(()=>{}), 900);
+    } catch {}
+  };
+
+  // Treasure chest: time + chat fills progress
+  useEffect(() => {
+    if (chestClosed) return;
+    const t = setInterval(() => {
+      setChestProgress(p => {
+        if (p >= 100) return 100;
+        const next = Math.min(100, p + 1.2);
+        if (next >= 100) setChestReady(true);
+        return next;
+      });
+    }, 400);
+    return () => clearInterval(t);
+  }, [chestClosed, chestRound]);
+
+  // Each incoming message also bumps the chest
+  useEffect(() => {
+    if (chestClosed) return;
+    if (messages.length === 0) return;
+    setChestProgress(p => {
+      const next = Math.min(100, p + 4);
+      if (next >= 100) setChestReady(true);
+      return next;
+    });
+  }, [messages.length]);
+
+  // Chest broadcast channel for claims
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase.channel(`chest:${roomId}`, { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "claim" }, (payload) => {
+        const round = payload.payload?.round;
+        const uid = payload.payload?.user_id as string;
+        const name = payload.payload?.name as string;
+        if (round !== chestRound) return;
+        if (winnersRef.current.includes(uid)) return;
+        if (winnersRef.current.length >= 3) return;
+        winnersRef.current = [...winnersRef.current, uid];
+        // notify
+        toast.success(`🎉 ${name} sandıktan ödül kaptı!`);
+        if (uid === user.id) {
+          // award +5 coins to self
+          supabase.from("profiles")
+            .update({ coin_balance: (profile?.coin_balance ?? 0) + 5 })
+            .eq("id", user.id)
+            .then(() => toast.success("🏆 +5 Coin ve 'Hızlı Parmak' rozeti senin!"));
+        }
+        if (winnersRef.current.length >= 3) {
+          setChestClosed(true);
+          setChestReady(false);
+          setTimeout(() => {
+            winnersRef.current = [];
+            claimedRef.current = false;
+            setChestProgress(0);
+            setChestRound(r => r + 1);
+            setChestClosed(false);
+          }, 6000);
+        }
+      })
+      .subscribe();
+    chestChanRef.current = ch;
+    return () => { supabase.removeChannel(ch); chestChanRef.current = null; };
+  }, [roomId, user?.id, chestRound, profile?.coin_balance]);
+
+  const claimChest = () => {
+    if (!user || !chestReady || claimedRef.current) return;
+    claimedRef.current = true;
+    chestChanRef.current?.send({
+      type: "broadcast",
+      event: "claim",
+      payload: { round: chestRound, user_id: user.id, name: profile?.display_name ?? "Birisi" },
+    });
+  };
 
   // auto-scroll chat
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [messages]);
@@ -288,6 +403,61 @@ function RoomPage() {
           </div>
         ))}
       </div>
+
+      {/* Kitten FX overlay */}
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-40">
+        {kittens.map(k => (
+          <div key={k.id} className="kitten-pop text-center">
+            <div className="text-[120px] leading-none drop-shadow-[0_0_30px_rgba(255,182,193,0.8)]">🐱</div>
+            <p className="mt-2 text-sm font-display font-bold text-primary-foreground bg-gradient-primary px-4 py-1.5 rounded-full shadow-glow">
+              {k.from} → Miyaaav! 🐾
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Glowing chat fx (kitten announcement) */}
+      <div className="pointer-events-none fixed left-0 right-0 top-28 z-30 flex flex-col items-center gap-1 px-4">
+        {chatFx.map(c => (
+          <p key={c.id} className="glow-text text-sm font-display font-bold text-gold text-center animate-fade-in">
+            {c.text}
+          </p>
+        ))}
+      </div>
+
+      {/* Treasure Chest */}
+      <div className="fixed top-24 right-3 z-30 flex flex-col items-center gap-1 w-16">
+        <button
+          onClick={claimChest}
+          disabled={!chestReady || claimedRef.current || chestClosed}
+          className={`relative size-14 rounded-2xl flex items-center justify-center text-2xl shadow-glow transition
+            ${chestReady ? "bg-gradient-to-br from-accent to-primary chest-ready" : "bg-card border border-border opacity-90"}`}
+          title={chestReady ? "İlk tıklayan kapar!" : "Sandık doluyor..."}
+        >
+          <span>{chestClosed ? "✅" : chestReady ? "🎁" : "📦"}</span>
+          {chestReady && <Sparkles className="absolute -top-1 -right-1 size-4 text-gold animate-pulse" />}
+        </button>
+        <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden border border-border">
+          <div
+            className={`h-full transition-all duration-300 ${chestReady ? "bg-gradient-to-r from-accent to-primary" : "bg-gradient-primary"}`}
+            style={{ width: `${chestProgress}%` }}
+          />
+        </div>
+        <p className="text-[9px] text-muted-foreground font-semibold">
+          {chestClosed ? "Bitti" : chestReady ? "KAP!" : `${Math.floor(chestProgress)}%`}
+        </p>
+      </div>
+
+      {/* Chest ready banner */}
+      {chestReady && !chestClosed && (
+        <div className="pointer-events-none fixed top-44 left-1/2 -translate-x-1/2 z-30 animate-scale-in">
+          <div className="bg-gradient-to-r from-accent via-primary to-accent px-5 py-2 rounded-full shadow-glow">
+            <p className="text-sm font-display font-extrabold text-primary-foreground glow-text">
+              🎁 İlk Tıklayan Kapar!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Footer controls */}
       <footer className="px-3 pb-4 pt-2 bg-background/80 backdrop-blur border-t border-border flex items-center gap-2">
