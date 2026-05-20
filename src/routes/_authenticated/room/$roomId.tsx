@@ -19,7 +19,7 @@ type ChatFx = { id: string; text: string };
 
 function RoomPage() {
   const { roomId } = Route.useParams();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { setRoom: setActiveRoom, clear: clearActiveRoom } = useActiveRoom();
   const nav = useNavigate();
   const [room, setRoom] = useState<any>(null);
