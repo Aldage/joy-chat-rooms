@@ -84,6 +84,10 @@ function RoomPage() {
   useEffect(() => {
     const ch = supabase.channel(`room:${roomId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats", filter: `room_id=eq.${roomId}` }, () => loadAll())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, (p) => {
+        const next = (p.new as any)?.popularity;
+        if (typeof next === "number") setEnergy(next);
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (p) => {
         const msg = p.new as Msg;
         if (!profiles[msg.user_id]) {
