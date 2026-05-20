@@ -1,0 +1,1 @@
+UPDATE public.gifts SET name = 'Masum Kedi' WHERE name = 'Yavru Kedi';
