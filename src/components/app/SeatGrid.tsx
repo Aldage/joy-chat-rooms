@@ -23,14 +23,17 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
   targetUserId?: string | null;
 }) {
   const viewerIsOwner = !!currentUserId && currentUserId === ownerId;
-  return (
-    <div className="grid grid-cols-4 gap-3 px-4">
-      {seats.map((s) => {
+  const vipSeats = seats.slice(0, 2);
+  const guestSeats = seats.slice(2);
+
+  const renderSeat = (s: SeatLite, big = false) => {
         const occupied = !!s.user_id;
         const isOwner = s.user_id === ownerId;
         const isTarget = targetUserId === s.user_id;
         const isSelf = currentUserId && s.user_id === currentUserId;
         const frame = findItem(s.user?.active_frame);
+        const size = big ? "size-20" : "size-16";
+        const letter = big ? "text-2xl" : "text-xl";
         return (
           <button
             key={s.id}
@@ -43,21 +46,21 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
             }}
             className="flex flex-col items-center gap-1.5"
           >
-            <div className={`relative size-16 rounded-full flex items-center justify-center transition ${
+            <div className={`relative ${size} rounded-full flex items-center justify-center transition ${
               occupied
-                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""}`
-                : `bg-card border-2 border-dashed ${s.is_locked ? "border-destructive/60" : "border-border"}`
+                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""} ${big && !frame ? "ring-2 ring-gold/60" : ""}`
+                : `bg-card border-2 border-dashed ${s.is_locked ? "border-destructive/60" : "border-border"} ${big ? "ring-1 ring-gold/40" : ""}`
             }`}>
               {occupied ? (
                 <div className={`size-full rounded-full flex items-center justify-center ${frame ? "bg-gradient-primary" : ""}`}>
-                  <span className="text-xl font-display font-bold text-primary-foreground">
+                  <span className={`${letter} font-display font-bold text-primary-foreground`}>
                     {s.user?.display_name?.[0]?.toUpperCase() ?? "?"}
                   </span>
                 </div>
               ) : s.is_locked ? (
-                <Lock className="size-5 text-destructive" />
+                <Lock className={big ? "size-6 text-destructive" : "size-5 text-destructive"} />
               ) : (
-                <Plus className="size-5 text-muted-foreground" />
+                <Plus className={big ? "size-6 text-muted-foreground" : "size-5 text-muted-foreground"} />
               )}
               {isOwner && (
                 <div className="absolute -top-1 -right-1 size-6 rounded-full bg-gold flex items-center justify-center shadow-glow">
@@ -75,12 +78,25 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
                 </div>
               )}
             </div>
-            <p className="text-[10px] font-semibold text-center max-w-[64px] truncate">
+            <p className={`text-[10px] font-semibold text-center truncate ${big ? "max-w-[80px]" : "max-w-[64px]"}`}>
               {s.user?.display_name ?? `#${s.seat_index + 1}`}
             </p>
           </button>
         );
-      })}
+  };
+
+  return (
+    <div className="px-4 space-y-4">
+      {vipSeats.length > 0 && (
+        <div className="flex items-start justify-center gap-8">
+          {vipSeats.map(s => renderSeat(s, true))}
+        </div>
+      )}
+      {guestSeats.length > 0 && (
+        <div className="grid grid-cols-4 gap-3">
+          {guestSeats.map(s => renderSeat(s, false))}
+        </div>
+      )}
     </div>
   );
 }
