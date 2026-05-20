@@ -14,10 +14,11 @@ type RoomRow = {
 };
 
 const CATEGORIES: { key: string; label: string; icon: any; color: string }[] = [
-  { key: "Tümü",   label: "Tümü",   icon: Radio,         color: "from-primary to-primary-glow" },
-  { key: "Sohbet", label: "Sohbet", icon: MessageCircle, color: "from-sky-500 to-indigo-500" },
-  { key: "Müzik",  label: "Müzik",  icon: Music,         color: "from-pink-500 to-fuchsia-500" },
-  { key: "Oyun",   label: "Oyun",   icon: Gamepad2,      color: "from-emerald-500 to-teal-500" },
+  { key: "Tümü",    label: "Tümü",       icon: Radio,         color: "from-primary to-primary-glow" },
+  { key: "Popüler", label: "🔥 Popüler", icon: Flame,         color: "from-orange-500 to-rose-500" },
+  { key: "Müzik",   label: "🎵 Müzik",   icon: Music,         color: "from-pink-500 to-fuchsia-500" },
+  { key: "Sohbet",  label: "💬 Sohbet",  icon: MessageCircle, color: "from-sky-500 to-indigo-500" },
+  { key: "Oyun",    label: "🎮 Oyun",    icon: Gamepad2,      color: "from-emerald-500 to-teal-500" },
 ];
 
 function Discover() {
@@ -66,7 +67,12 @@ function Discover() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  const filtered = cat === "Tümü" ? rooms : rooms.filter(r => r.tag === cat);
+  const filtered =
+    cat === "Tümü"    ? rooms
+  : cat === "Popüler" ? [...rooms].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+  : rooms.filter(r => r.tag === cat);
+
+  const maxPop = Math.max(100, ...rooms.map(r => r.popularity ?? 0));
 
   return (
     <div className="bg-gradient-hero min-h-screen pb-28">
@@ -139,22 +145,41 @@ function Discover() {
                         <Lock className="size-3 text-gold" />
                       </span>
                     )}
+                    <span className="absolute top-2 right-8 flex items-center gap-1 bg-black/55 backdrop-blur text-orange-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <Flame className="size-2.5" /> {((r.popularity ?? 0) > 999 ? ((r.popularity ?? 0)/1000).toFixed(1)+"K" : (r.popularity ?? 0))}
+                    </span>
                     <span className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/45 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                       <Users className="size-2.5" /> {r.count}
                     </span>
                     <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
-                      <span className="flex items-center gap-1 bg-black/55 backdrop-blur text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        <Flame className="size-2.5" /> {(r.popularity ?? 0).toLocaleString()}
-                      </span>
                       <span className="bg-white/15 backdrop-blur text-white text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
                         {r.tag ?? "Sohbet"}
                       </span>
                     </div>
                   </div>
                   <p className="font-semibold text-sm truncate">{r.title}</p>
-                  <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                    <Mic className="size-3 text-primary" /> {r.owner?.display_name ?? "—"} • dinleyen {r.count}
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="size-5 rounded-full bg-gradient-primary p-[1px] shrink-0">
+                      <div className="size-full rounded-full bg-card flex items-center justify-center overflow-hidden">
+                        {r.owner?.avatar_url
+                          ? <img src={r.owner.avatar_url} alt="" className="size-full object-cover" />
+                          : <span className="text-[9px] font-bold">{r.owner?.display_name?.[0]?.toUpperCase() ?? "?"}</span>}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate flex-1">{r.owner?.display_name ?? "—"}</p>
+                  </div>
+                  {/* Trend Enerji Bar */}
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full bg-secondary/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-gold via-orange-400 to-pink-500 shadow-[0_0_8px_rgba(255,180,80,0.7)] transition-all"
+                        style={{ width: `${Math.min(100, Math.round(((r.popularity ?? 0) / maxPop) * 100))}%` }}
+                      />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <Flame className="size-2 text-orange-400" /> Trend Enerji {(r.popularity ?? 0).toLocaleString()}
+                    </p>
+                  </div>
                 </button>
               );
             })}
