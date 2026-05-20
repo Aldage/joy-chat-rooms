@@ -562,9 +562,27 @@ function RoomPage() {
             <div className="flex-1 min-w-0">
               <button
                 onClick={() => openProfileForUser(m.user_id)}
-                className="text-[11px] text-muted-foreground hover:text-foreground transition"
+                className="text-[11px] text-muted-foreground hover:text-foreground transition flex items-center gap-1.5"
               >
-                {profiles[m.user_id]?.display_name ?? "..."}
+                {(() => {
+                  const lvl = levelOf(profiles[m.user_id]?.xp);
+                  const vip = m.user_id === room?.owner_id || modIds.has(m.user_id);
+                  return (
+                    <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none ${
+                      vip
+                        ? "bg-gradient-to-r from-gold to-amber-500 text-background shadow-[0_0_6px_rgba(255,200,60,0.6)]"
+                        : lvl >= 10
+                          ? "bg-gradient-to-r from-fuchsia-500 to-violet-500 text-white"
+                          : lvl >= 5
+                            ? "bg-gradient-primary text-primary-foreground"
+                            : "bg-secondary text-foreground"
+                    }`}>
+                      {vip && <Crown className="size-2.5" />}
+                      Lv.{lvl}{vip ? " VIP" : ""}
+                    </span>
+                  );
+                })()}
+                <span>{profiles[m.user_id]?.display_name ?? "..."}</span>
               </button>
               <p className="text-sm bg-card border border-border rounded-2xl rounded-tl-sm px-3 py-1.5 inline-block max-w-full break-words">{m.content}</p>
             </div>
@@ -632,6 +650,48 @@ function RoomPage() {
           <div className="bg-gradient-to-r from-accent via-primary to-accent px-5 py-2 rounded-full shadow-glow">
             <p className="text-sm font-display font-extrabold text-primary-foreground glow-text whitespace-nowrap">
               🎁 LOUNGE BONUSU: İLK TIKLAYAN KAPAR!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Soundboard floating button + panel (owner/mod only) */}
+      {isModerator && (
+        <div className="fixed top-44 right-3 z-30 flex flex-col items-end gap-2">
+          <button
+            onClick={() => setSbOpen(o => !o)}
+            className={`size-12 rounded-2xl flex items-center justify-center shadow-glow transition ${
+              sbOpen ? "bg-gradient-primary" : "bg-card border border-border"
+            }`}
+            title="Ses Efektleri"
+          >
+            <Music2 className={`size-5 ${sbOpen ? "text-primary-foreground" : "text-foreground"}`} />
+          </button>
+          {sbOpen && (
+            <div className="bg-card/95 backdrop-blur border border-accent/40 rounded-2xl p-2 grid grid-cols-2 gap-2 shadow-glow animate-scale-in w-44">
+              <p className="col-span-2 text-[10px] font-display font-bold text-center text-muted-foreground uppercase tracking-wider pt-1">Ses Efektleri 🎵</p>
+              {SFX_LIST.map(s => (
+                <button
+                  key={s.label}
+                  onClick={() => playSfx(s.emoji, s.label)}
+                  className="bg-secondary hover:bg-gradient-primary hover:text-primary-foreground transition rounded-xl py-2 text-xs font-semibold flex flex-col items-center gap-0.5 active:scale-[0.97]"
+                >
+                  <span className="text-xl">{s.emoji}</span>
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Active SFX banner */}
+      {sfxActive && (
+        <div className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 animate-scale-in">
+          <div className="bg-gradient-to-r from-primary via-accent to-primary px-8 py-4 rounded-full shadow-glow flex items-center gap-3">
+            <span className="text-4xl animate-pulse">{sfxActive.emoji}</span>
+            <p className="text-base font-display font-extrabold text-primary-foreground glow-text whitespace-nowrap">
+              {sfxActive.label.toUpperCase()}!
             </p>
           </div>
         </div>
