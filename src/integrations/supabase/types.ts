@@ -99,6 +99,7 @@ export type Database = {
           id: string
           is_guest: boolean
           updated_at: string
+          xp: number
         }
         Insert: {
           active_entry_effect?: string | null
@@ -112,6 +113,7 @@ export type Database = {
           id: string
           is_guest?: boolean
           updated_at?: string
+          xp?: number
         }
         Update: {
           active_entry_effect?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           id?: string
           is_guest?: boolean
           updated_at?: string
+          xp?: number
         }
         Relationships: []
       }
