@@ -69,9 +69,10 @@ function EntryScreen() {
             <Sparkles className="size-12 text-primary-foreground" />
           </div>
         </div>
-        <h1 className="mt-6 text-4xl font-display font-bold tracking-tight bg-gradient-to-r from-primary-foreground via-primary-glow to-primary-foreground bg-clip-text text-transparent">
-          Sound Haven
+        <h1 className="mt-6 text-5xl font-display font-bold tracking-[0.18em] bg-gradient-to-r from-primary-foreground via-primary-glow to-amber-300 bg-clip-text text-transparent">
+          KOIZORA
         </h1>
+        <p className="mt-1 text-[10px] uppercase tracking-[0.4em] text-primary-glow/80">Social · Voice · Live</p>
         <p className="mt-2 text-sm text-muted-foreground max-w-xs">
           Sesli sohbet odaları, canlı yayıncılar ve hediyelerle dolu bir dünya.
         </p>
