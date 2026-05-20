@@ -5,10 +5,12 @@ import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
+import { MegaGiftFX, type MegaGift } from "@/components/app/MegaGiftFX";
+import { DiceGame } from "@/components/app/DiceGame";
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { useActiveRoom } from "@/lib/active-room-context";
-import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown } from "lucide-react";
+import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown, Dices } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -67,6 +69,9 @@ function RoomPage() {
   const [sbOpen, setSbOpen] = useState(false);
   const [sfxActive, setSfxActive] = useState<{ emoji: string; label: string } | null>(null);
   const sfxChanRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Dice & mega FX
+  const [diceOpen, setDiceOpen] = useState(false);
+  const [megaGift, setMegaGift] = useState<MegaGift | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
@@ -112,7 +117,7 @@ function RoomPage() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "gift_transactions", filter: `room_id=eq.${roomId}` }, async (p) => {
         const tx = p.new as any;
-        const { data: g } = await supabase.from("gifts").select("emoji,name").eq("id", tx.gift_id).single();
+        const { data: g } = await supabase.from("gifts").select("emoji,name,cost").eq("id", tx.gift_id).single();
         if (tx.sender_id === user?.id || tx.receiver_id === user?.id) {
           refreshProfile();
         }
@@ -131,6 +136,14 @@ function RoomPage() {
           : (liveProfiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
+        const cost = g?.cost ?? tx.total_cost ?? 0;
+        // Mega full-screen FX for high-tier gifts (Luxury Car & up: cost >= 1000)
+        if (cost >= 1000) {
+          setMegaGift({
+            id, emoji: g?.emoji ?? "🎁", name: name || "Hediye",
+            from: fromName, to: toName, cost,
+          });
+        }
         const premiumKind: PremiumGiftKind | null =
           name === "Masum Kedi" || name === "Yavru Kedi" ? "puss" :
           name === "Çöl Dansçısı" ? "dancer" :
@@ -729,6 +742,13 @@ function RoomPage() {
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
           <GiftIcon className="size-4 text-accent-foreground" />
         </button>
+        <button
+          onClick={() => setDiceOpen(true)}
+          className="size-11 rounded-full bg-gradient-to-br from-amber-400 via-rose-500 to-fuchsia-600 shadow-glow flex items-center justify-center active:scale-95 transition"
+          title="Şans Zarı"
+        >
+          <Dices className="size-4 text-white drop-shadow" />
+        </button>
         <HeartTapper onTap={onHeartTap} />
       </footer>
 
@@ -751,6 +771,8 @@ function RoomPage() {
       />
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
+      <DiceGame open={diceOpen} onOpenChange={setDiceOpen} roomId={roomId} />
+      <MegaGiftFX event={megaGift} onDone={() => setMegaGift(null)} />
 
       {/* Moderation popover */}
       {modSeat && (
