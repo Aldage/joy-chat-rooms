@@ -8,7 +8,7 @@ import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { useActiveRoom } from "@/lib/active-room-context";
-import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
+import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -16,6 +16,16 @@ export const Route = createFileRoute("/_authenticated/room/$roomId")({ component
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 type ChatFx = { id: string; text: string };
+type ProfileLite = { display_name: string; avatar_url: string | null; active_frame?: string | null; xp?: number };
+
+const SFX_LIST: { emoji: string; label: string }[] = [
+  { emoji: "👏", label: "Alkış" },
+  { emoji: "😂", label: "Kahkaha" },
+  { emoji: "🔔", label: "Gong" },
+  { emoji: "👎", label: "Yuhalama" },
+];
+
+const levelOf = (xp?: number | null) => Math.floor((xp ?? 0) / 100) + 1;
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -24,7 +34,7 @@ function RoomPage() {
   const nav = useNavigate();
   const [room, setRoom] = useState<any>(null);
   const [seats, setSeats] = useState<SeatLite[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { display_name: string; avatar_url: string | null; active_frame?: string | null }>>({});
+  const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [openGift, setOpenGift] = useState(false);
@@ -53,6 +63,10 @@ function RoomPage() {
   const [modIds, setModIds] = useState<Set<string>>(new Set());
   const [pwOpen, setPwOpen] = useState(false);
   const [pwInput, setPwInput] = useState("");
+  // Soundboard
+  const [sbOpen, setSbOpen] = useState(false);
+  const [sfxActive, setSfxActive] = useState<{ emoji: string; label: string } | null>(null);
+  const sfxChanRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
@@ -65,9 +79,9 @@ function RoomPage() {
     setEnergy((r as any).popularity ?? 0);
     const { data: s } = await supabase.from("room_seats").select("*").eq("room_id", roomId).order("seat_index");
     const userIds = [...new Set([r.owner_id, ...(s ?? []).map(x => x.user_id).filter(Boolean) as string[]])];
-    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").in("id", userIds);
+    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").in("id", userIds);
     const map: typeof profiles = {};
-    profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame }; });
+    profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
     setProfiles(map);
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
     const { data: m } = await supabase.from("room_messages").select("*").eq("room_id", roomId).order("created_at", { ascending: true }).limit(100);
@@ -91,8 +105,8 @@ function RoomPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (p) => {
         const msg = p.new as Msg;
         if (!profiles[msg.user_id]) {
-          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").eq("id", msg.user_id).single();
-          if (data) setProfiles(prev => ({ ...prev, [data.id]: { display_name: data.display_name, avatar_url: data.avatar_url, active_frame: (data as any).active_frame } }));
+          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").eq("id", msg.user_id).single();
+          if (data) setProfiles(prev => ({ ...prev, [data.id]: { display_name: data.display_name, avatar_url: data.avatar_url, active_frame: (data as any).active_frame, xp: (data as any).xp ?? 0 } }));
         }
         setMessages(prev => [...prev, msg]);
       })
@@ -105,9 +119,9 @@ function RoomPage() {
         const missingIds = [tx.sender_id, tx.receiver_id].filter((id) => id && !profiles[id]);
         let liveProfiles = profiles;
         if (missingIds.length > 0) {
-          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").in("id", missingIds);
+          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").in("id", missingIds);
           const fetched: typeof profiles = {};
-          data?.forEach(p => { fetched[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame }; });
+          data?.forEach(p => { fetched[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
           liveProfiles = { ...profiles, ...fetched };
           if (Object.keys(fetched).length > 0) setProfiles(prev => ({ ...prev, ...fetched }));
         }
@@ -322,6 +336,9 @@ function RoomPage() {
     const content = input.trim();
     setInput("");
     await supabase.from("room_messages").insert({ room_id: roomId, user_id: user.id, content });
+    // Her mesaj +1 XP
+    const cur = (profile as any)?.xp ?? 0;
+    supabase.from("profiles").update({ xp: cur + 1 }).eq("id", user.id).then(() => refreshProfile());
   };
 
   const leave = async () => {
@@ -437,10 +454,36 @@ function RoomPage() {
     toast.success(val ? "Oda şifrelendi 🔐" : "Şifre kaldırıldı");
   };
 
-  // mySeat üzerinde konuşma göstergesini yerelde yansıt
-  const seatsView = seats.map(s =>
-    s.user_id && s.user_id === user?.id ? { ...s, speaking: speaking && micOn, is_muted: !micOn } : s
-  );
+  // Soundboard broadcast channel
+  useEffect(() => {
+    const ch = supabase.channel(`sfx:${roomId}`, { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "play" }, (p) => {
+        const emoji = p.payload?.emoji as string;
+        const label = p.payload?.label as string;
+        if (!emoji) return;
+        setSfxActive({ emoji, label });
+        setTimeout(() => setSfxActive(null), 1800);
+      })
+      .subscribe();
+    sfxChanRef.current = ch;
+    return () => { supabase.removeChannel(ch); sfxChanRef.current = null; };
+  }, [roomId]);
+
+  const isModerator = !!user && (isRoomOwner || modIds.has(user.id));
+
+  const playSfx = (emoji: string, label: string) => {
+    sfxChanRef.current?.send({ type: "broadcast", event: "play", payload: { emoji, label } });
+    setSbOpen(false);
+  };
+
+  // mySeat üzerinde konuşma göstergesini ve sfx pulse'ını yansıt
+  const seatsView = seats.map(s => {
+    if (!s.user_id) return s;
+    const isSelf = s.user_id === user?.id;
+    const base = isSelf ? { ...s, speaking: speaking && micOn, is_muted: !micOn } : s;
+    if (sfxActive) return { ...base, speaking: true, is_muted: false };
+    return base;
+  });
 
   return (
     <div className="bg-gradient-hero min-h-screen flex flex-col">
