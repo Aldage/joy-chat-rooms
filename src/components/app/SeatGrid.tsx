@@ -1,4 +1,5 @@
 import { Mic, MicOff, Lock, Plus, Crown } from "lucide-react";
+import { findItem } from "@/lib/store-items";
 
 export type SeatLite = {
   id: string;
@@ -6,7 +7,7 @@ export type SeatLite = {
   user_id: string | null;
   is_muted: boolean;
   is_locked: boolean;
-  user?: { display_name: string; avatar_url: string | null } | null;
+  user?: { display_name: string; avatar_url: string | null; active_frame?: string | null } | null;
   speaking?: boolean;
 };
 
@@ -29,6 +30,7 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
         const isOwner = s.user_id === ownerId;
         const isTarget = targetUserId === s.user_id;
         const isSelf = currentUserId && s.user_id === currentUserId;
+        const frame = findItem(s.user?.active_frame);
         return (
           <button
             key={s.id}
@@ -43,13 +45,15 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
           >
             <div className={`relative size-16 rounded-full flex items-center justify-center transition ${
               occupied
-                ? `bg-gradient-primary shadow-glow ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""}`
+                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""}`
                 : `bg-card border-2 border-dashed ${s.is_locked ? "border-destructive/60" : "border-border"}`
             }`}>
               {occupied ? (
-                <span className="text-xl font-display font-bold text-primary-foreground">
-                  {s.user?.display_name?.[0]?.toUpperCase() ?? "?"}
-                </span>
+                <div className={`size-full rounded-full flex items-center justify-center ${frame ? "bg-gradient-primary" : ""}`}>
+                  <span className="text-xl font-display font-bold text-primary-foreground">
+                    {s.user?.display_name?.[0]?.toUpperCase() ?? "?"}
+                  </span>
+                </div>
               ) : s.is_locked ? (
                 <Lock className="size-5 text-destructive" />
               ) : (
