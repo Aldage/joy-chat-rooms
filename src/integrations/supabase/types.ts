@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      coin_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          type: Database["public"]["Enums"]["coin_tx_type"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type: Database["public"]["Enums"]["coin_tx_type"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: Database["public"]["Enums"]["coin_tx_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dice_games: {
+        Row: {
+          bet_amount: number
+          dice_result: number
+          id: string
+          is_win: boolean
+          played_at: string
+          reward_amount: number
+          room_id: string | null
+          user_id: string
+        }
+        Insert: {
+          bet_amount: number
+          dice_result: number
+          id?: string
+          is_win: boolean
+          played_at?: string
+          reward_amount?: number
+          room_id?: string | null
+          user_id: string
+        }
+        Update: {
+          bet_amount?: number
+          dice_result?: number
+          id?: string
+          is_win?: boolean
+          played_at?: string
+          reward_amount?: number
+          room_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           amount: number
@@ -83,6 +143,36 @@ export type Database = {
           emoji?: string
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      pk_battles: {
+        Row: {
+          blue_team_score: number
+          ended_at: string | null
+          id: string
+          red_team_score: number
+          room_id: string
+          started_at: string
+          status: Database["public"]["Enums"]["pk_status"]
+        }
+        Insert: {
+          blue_team_score?: number
+          ended_at?: string | null
+          id?: string
+          red_team_score?: number
+          room_id: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["pk_status"]
+        }
+        Update: {
+          blue_team_score?: number
+          ended_at?: string | null
+          id?: string
+          red_team_score?: number
+          room_id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["pk_status"]
         }
         Relationships: []
       }
@@ -314,6 +404,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      coin_tx_type:
+        | "purchase"
+        | "gift_send"
+        | "gift_receive"
+        | "dice_bet"
+        | "dice_win"
+        | "store_buy"
+      pk_status: "active" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -442,6 +540,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      coin_tx_type: [
+        "purchase",
+        "gift_send",
+        "gift_receive",
+        "dice_bet",
+        "dice_win",
+        "store_buy",
+      ],
+      pk_status: ["active", "completed"],
     },
   },
 } as const
