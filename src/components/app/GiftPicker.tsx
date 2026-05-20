@@ -11,7 +11,7 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   roomId: string; targetUserId: string | null;
 }) {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [selected, setSelected] = useState<Gift | null>(null);
   const [sending, setSending] = useState(false);
@@ -31,6 +31,7 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
     });
     setSending(false);
     if (error) { toast.error(error.message); return; }
+    await refreshProfile();
     toast.success(`${selected.emoji} ${selected.name} gönderildi!`);
     setSelected(null); onOpenChange(false);
   };
