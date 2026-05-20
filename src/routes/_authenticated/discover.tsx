@@ -1,14 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins, TrendingUp, Crown, Medal, Users, Mic, Radio, Music, Gamepad2, MessageCircle, Lock } from "lucide-react";
+import { Coins, TrendingUp, Crown, Medal, Users, Mic, Radio, Music, Gamepad2, MessageCircle, Lock, Flame } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/discover")({ component: Discover });
 
 type Tab = "live" | "board";
 type RoomRow = {
   id: string; title: string; tag: string | null; cover_url: string | null;
-  seat_count: number; owner_id: string; password?: string | null;
+  seat_count: number; owner_id: string; password?: string | null; popularity?: number;
   owner?: { display_name: string; avatar_url: string | null };
   count?: number;
 };
@@ -39,7 +39,7 @@ function Discover() {
   const loadRooms = async () => {
     const { data: rs } = await supabase
       .from("rooms")
-      .select("id,title,tag,cover_url,seat_count,owner_id,password")
+      .select("id,title,tag,cover_url,seat_count,owner_id,password,popularity")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (!rs) return;
@@ -142,9 +142,14 @@ function Discover() {
                     <span className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/45 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                       <Users className="size-2.5" /> {r.count}
                     </span>
-                    <span className="absolute bottom-2 left-2 bg-white/15 backdrop-blur text-white text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-                      {r.tag ?? "Sohbet"}
-                    </span>
+                    <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+                      <span className="flex items-center gap-1 bg-black/55 backdrop-blur text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        <Flame className="size-2.5" /> {(r.popularity ?? 0).toLocaleString()}
+                      </span>
+                      <span className="bg-white/15 backdrop-blur text-white text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
+                        {r.tag ?? "Sohbet"}
+                      </span>
+                    </div>
                   </div>
                   <p className="font-semibold text-sm truncate">{r.title}</p>
                   <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">

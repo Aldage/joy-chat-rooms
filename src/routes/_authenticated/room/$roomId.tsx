@@ -7,6 +7,7 @@ import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
+import { useActiveRoom } from "@/lib/active-room-context";
 import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ type ChatFx = { id: string; text: string };
 function RoomPage() {
   const { roomId } = Route.useParams();
   const { user, profile } = useAuth();
+  const { setRoom: setActiveRoom, clear: clearActiveRoom } = useActiveRoom();
   const nav = useNavigate();
   const [room, setRoom] = useState<any>(null);
   const [seats, setSeats] = useState<SeatLite[]>([]);
@@ -33,6 +35,8 @@ function RoomPage() {
   // Energy / hearts
   const [energy, setEnergy] = useState(0);
   const heartsBucketRef = useRef(0);
+  const popularityBucketRef = useRef(0);
+  const popularityFlushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Chest
   const [chestProgress, setChestProgress] = useState(0);
   const [chestReady, setChestReady] = useState(false);
@@ -58,6 +62,7 @@ function RoomPage() {
     const { data: r } = await supabase.from("rooms").select("*").eq("id", roomId).maybeSingle();
     if (!r) { toast.error("Oda bulunamadı"); nav({ to: "/home" }); return; }
     setRoom(r);
+    setEnergy((r as any).popularity ?? 0);
     const { data: s } = await supabase.from("room_seats").select("*").eq("room_id", roomId).order("seat_index");
     const userIds = [...new Set([r.owner_id, ...(s ?? []).map(x => x.user_id).filter(Boolean) as string[]])];
     const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", userIds);
@@ -67,6 +72,10 @@ function RoomPage() {
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
     const { data: m } = await supabase.from("room_messages").select("*").eq("room_id", roomId).order("created_at", { ascending: true }).limit(100);
     setMessages((m ?? []) as Msg[]);
+    setActiveRoom({
+      id: r.id, title: r.title, tag: r.tag,
+      ownerName: profs?.find(p => p.id === r.owner_id)?.display_name,
+    });
   };
 
   useEffect(() => { loadAll(); }, [roomId]);
@@ -75,6 +84,10 @@ function RoomPage() {
   useEffect(() => {
     const ch = supabase.channel(`room:${roomId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats", filter: `room_id=eq.${roomId}` }, () => loadAll())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, (p) => {
+        const next = (p.new as any)?.popularity;
+        if (typeof next === "number") setEnergy(next);
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (p) => {
         const msg = p.new as Msg;
         if (!profiles[msg.user_id]) {
@@ -300,6 +313,7 @@ function RoomPage() {
       if (seat) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", seat.id);
     }
     localStream.current?.getTracks().forEach(t => t.stop());
+    clearActiveRoom();
     nav({ to: "/home" });
   };
 
@@ -316,6 +330,17 @@ function RoomPage() {
   const onHeartTap = () => {
     setEnergy(e => e + 1);
     heartsBucketRef.current += 1;
+    popularityBucketRef.current += 1;
+    if (!popularityFlushTimer.current) {
+      popularityFlushTimer.current = setTimeout(() => {
+        const delta = Math.min(500, popularityBucketRef.current);
+        popularityBucketRef.current = 0;
+        popularityFlushTimer.current = null;
+        if (delta > 0) {
+          supabase.rpc("bump_room_popularity" as any, { _room_id: roomId, _delta: delta }).then(() => {});
+        }
+      }, 700);
+    }
     if (heartsBucketRef.current >= 100) {
       heartsBucketRef.current = 0;
       if (!chestClosed) {

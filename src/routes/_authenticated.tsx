@@ -2,6 +2,8 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/app/BottomNav";
+import { MiniPlayer } from "@/components/app/MiniPlayer";
+import { ActiveRoomProvider } from "@/lib/active-room-context";
 import { Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -27,11 +29,14 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div className="relative min-h-screen w-full bg-background mx-auto max-w-md">
-      <div className="pb-28">
-        <Outlet />
+    <ActiveRoomProvider>
+      <div className="relative min-h-screen w-full bg-background mx-auto max-w-md">
+        <div className="pb-28">
+          <Outlet />
+        </div>
+        <MiniPlayer />
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </ActiveRoomProvider>
   );
 }

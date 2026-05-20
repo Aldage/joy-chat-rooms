@@ -3,7 +3,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock } from "lucide-react";
+import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check } from "lucide-react";
+import { useEffect } from "react";
+import { ALL_ITEMS, findItem, type StoreItem } from "@/lib/store-items";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,29 @@ function ProfilePage() {
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
   const [saving, setSaving] = useState(false);
+  const [inventory, setInventory] = useState<StoreItem[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_items").select("item_id").eq("user_id", user.id).then(({ data }) => {
+      const items = (data ?? []).map(d => findItem(d.item_id)).filter(Boolean) as StoreItem[];
+      setInventory(items);
+    });
+  }, [user?.id]);
+
+  const activeFrame = findItem((profile as any)?.active_frame);
+  const activeEntry = findItem((profile as any)?.active_entry_effect);
+
+  const activate = async (item: StoreItem) => {
+    if (!user) return;
+    const col = item.type === "frame" ? "active_frame" : "active_entry_effect";
+    const current = item.type === "frame" ? (profile as any)?.active_frame : (profile as any)?.active_entry_effect;
+    const next = current === item.id ? null : item.id;
+    const { error } = await supabase.from("profiles").update({ [col]: next } as any).eq("id", user.id);
+    if (error) { toast.error(error.message); return; }
+    await refreshProfile();
+    toast.success(next ? `✨ "${item.name}" aktif!` : "Devre dışı bırakıldı");
+  };
 
   const openEdit = () => {
     setName(profile?.display_name ?? "");
@@ -166,6 +191,59 @@ function ProfilePage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Inventory */}
+      <div className="mt-5 bg-gradient-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="size-4 text-accent" />
+            <h3 className="font-display font-bold">Envanterim</h3>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {activeFrame ? `Çerçeve: ${activeFrame.name}` : "Çerçeve: yok"}{" · "}
+            {activeEntry ? `Giriş: ${activeEntry.name}` : "Giriş: yok"}
+          </span>
+        </div>
+        {inventory.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            Henüz eşya yok. <span className="text-gold font-semibold">Cüzdan → VIP Mağaza</span>'dan satın al.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {inventory.map(item => {
+              const Icon = item.icon;
+              const isActive =
+                item.type === "frame"
+                  ? (profile as any)?.active_frame === item.id
+                  : (profile as any)?.active_entry_effect === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => activate(item)}
+                  className={`relative rounded-2xl p-2 border transition text-left ${
+                    isActive
+                      ? "border-gold bg-gold/10 shadow-glow"
+                      : "border-border bg-card hover:border-accent/60"
+                  }`}
+                >
+                  <div className={`aspect-square rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-1.5`}>
+                    <Icon className="size-7 text-white drop-shadow" />
+                  </div>
+                  <p className="text-[10px] font-bold truncate">{item.name}</p>
+                  <p className="text-[9px] text-muted-foreground">
+                    {item.type === "frame" ? "Çerçeve" : "Giriş Efekti"}
+                  </p>
+                  {isActive && (
+                    <span className="absolute -top-1 -right-1 size-5 rounded-full bg-gold flex items-center justify-center shadow-glow">
+                      <Check className="size-3 text-background" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Edit dialog */}
