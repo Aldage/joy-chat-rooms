@@ -543,7 +543,7 @@ function RoomPage() {
   });
 
   return (
-    <div className="bg-gradient-hero min-h-screen flex flex-col">
+    <div className="bg-gradient-hero min-h-screen flex flex-col bio-backdrop">
       {/* Header */}
       <header className="px-4 pt-12 pb-3 flex items-center gap-3">
         <button onClick={leave} className="size-10 rounded-full bg-card border border-border flex items-center justify-center">
