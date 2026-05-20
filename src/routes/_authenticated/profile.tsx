@@ -106,8 +106,8 @@ function ProfilePage() {
         <div className="absolute -bottom-12 -left-12 size-40 rounded-full bg-accent/30 blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto w-fit">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary via-accent to-primary-glow blur-md opacity-80 animate-pulse" />
-          <div className="relative size-28 rounded-full p-[3px] bg-gradient-to-tr from-primary via-accent to-primary-glow shadow-glow">
+          <div className={`absolute inset-0 rounded-full blur-md opacity-80 animate-pulse bg-gradient-to-tr ${activeFrame ? activeFrame.gradient : "from-primary via-accent to-primary-glow"}`} />
+          <div className={`relative size-28 rounded-full p-[3px] shadow-glow bg-gradient-to-tr ${activeFrame ? activeFrame.gradient : "from-primary via-accent to-primary-glow"}`}>
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.display_name} className="size-full rounded-full object-cover bg-card" />
             ) : (
