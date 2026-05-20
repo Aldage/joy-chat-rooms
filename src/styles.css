@@ -405,7 +405,7 @@
   }
   .animate-route-in { animation: route-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-  /* KOIZORA wordmark shimmer (gold sweep) */
+  /* KOIZORA wordmark shimmer (cyan · iridescent violet · gold sweep) */
   @keyframes koizora-shimmer {
     0%   { background-position: -200% 50%; }
     100% { background-position:  200% 50%; }
@@ -413,20 +413,22 @@
   .koizora-shimmer {
     background-image: linear-gradient(
       110deg,
-      oklch(0.72 0.2 305) 0%,
-      oklch(0.85 0.15 305) 25%,
-      oklch(0.95 0.18 85)  45%,
+      oklch(0.78 0.18 195) 0%,
+      oklch(0.88 0.16 180) 22%,
+      oklch(0.96 0.18 85)  45%,
       #ffffff               50%,
-      oklch(0.95 0.18 85)  55%,
-      oklch(0.85 0.15 305) 75%,
-      oklch(0.72 0.2 305) 100%
+      oklch(0.96 0.18 85)  55%,
+      oklch(0.82 0.2 305)  78%,
+      oklch(0.78 0.18 195) 100%
     );
     background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     animation: koizora-shimmer 3.2s linear infinite;
-    filter: drop-shadow(0 0 8px oklch(0.78 0.18 305 / 0.55));
+    filter:
+      drop-shadow(0 0 6px oklch(0.82 0.18 195 / 0.65))
+      drop-shadow(0 0 12px oklch(0.78 0.2 305 / 0.45));
   }
 }
 
