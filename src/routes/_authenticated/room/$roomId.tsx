@@ -100,6 +100,9 @@ function RoomPage() {
         const tx = p.new as any;
         const { data: g } = await supabase.from("gifts").select("emoji,name").eq("id", tx.gift_id).single();
         const fromName = profiles[tx.sender_id]?.display_name ?? "Birisi";
+        const toLabel = tx.sender_id === tx.receiver_id
+          ? "kendine"
+          : `${profiles[tx.receiver_id]?.display_name ?? "yayıncı"}'ye`;
         const toName = tx.sender_id === tx.receiver_id
           ? "kendine"
           : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
@@ -116,7 +119,7 @@ function RoomPage() {
             giftName: name, emoji: g?.emoji ?? "🎁",
           }]);
           const cid = crypto.randomUUID();
-          const chatText = `Sistem: ${fromName}, ${toName}'ya muhteşem bir ${name} armağan etti! ✨`;
+          const chatText = `Sistem: ${fromName}, ${toLabel} muhteşem bir ${name} armağan etti! ✨`;
           setChatFx(prev => [...prev, { id: cid, text: chatText }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
           // Inject a styled system message into the chat stream (local only)
