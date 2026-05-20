@@ -99,13 +99,22 @@ function RoomPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "gift_transactions", filter: `room_id=eq.${roomId}` }, async (p) => {
         const tx = p.new as any;
         const { data: g } = await supabase.from("gifts").select("emoji,name").eq("id", tx.gift_id).single();
-        const fromName = profiles[tx.sender_id]?.display_name ?? "Birisi";
-        const toLabel = tx.sender_id === tx.receiver_id
-          ? "kendine"
-          : `${profiles[tx.receiver_id]?.display_name ?? "yayıncı"}'ye`;
+        if (tx.sender_id === user?.id || tx.receiver_id === user?.id) {
+          refreshProfile();
+        }
+        const missingIds = [tx.sender_id, tx.receiver_id].filter((id) => id && !profiles[id]);
+        let liveProfiles = profiles;
+        if (missingIds.length > 0) {
+          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").in("id", missingIds);
+          const fetched: typeof profiles = {};
+          data?.forEach(p => { fetched[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame }; });
+          liveProfiles = { ...profiles, ...fetched };
+          if (Object.keys(fetched).length > 0) setProfiles(prev => ({ ...prev, ...fetched }));
+        }
+        const fromName = liveProfiles[tx.sender_id]?.display_name ?? "Birisi";
         const toName = tx.sender_id === tx.receiver_id
           ? "kendine"
-          : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
+          : (liveProfiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
         const premiumKind: PremiumGiftKind | null =
@@ -119,7 +128,9 @@ function RoomPage() {
             giftName: name, emoji: g?.emoji ?? "🎁",
           }]);
           const cid = crypto.randomUUID();
-          const chatText = `Sistem: ${fromName}, ${toLabel} muhteşem bir ${name} armağan etti! ✨`;
+          const chatText = tx.sender_id === tx.receiver_id
+            ? `Sistem: ${fromName}, kendine muhteşem bir ${name} armağan etti! ✨`
+            : `Sistem: ${fromName}, ${toName} kullanıcısına muhteşem bir ${name} armağan etti! ✨`;
           setChatFx(prev => [...prev, { id: cid, text: chatText }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
           // Inject a styled system message into the chat stream (local only)
@@ -136,7 +147,7 @@ function RoomPage() {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [roomId, profiles]);
+  }, [roomId, profiles, user?.id, refreshProfile]);
 
   // Meow synth
   const playMeow = () => {
@@ -223,7 +234,7 @@ function RoomPage() {
       .subscribe();
     chestChanRef.current = ch;
     return () => { supabase.removeChannel(ch); chestChanRef.current = null; };
-  }, [roomId, user?.id, chestRound, profile?.coin_balance]);
+  }, [roomId, user?.id, chestRound, profile?.coin_balance, refreshProfile]);
 
   const claimChest = () => {
     if (!user || !chestReady || claimedRef.current) return;
@@ -459,7 +470,9 @@ function RoomPage() {
         )}
         <div className="flex items-center gap-1 bg-card border border-border rounded-full px-3 py-1.5">
           <Coins className="size-3.5 text-gold" />
-          <span className="text-xs font-semibold">{profile?.coin_balance ?? 0}</span>
+          <span key={profile?.coin_balance ?? 0} className="text-xs font-semibold tabular-nums animate-scale-in">
+            {(profile?.coin_balance ?? 0).toLocaleString("tr-TR")}
+          </span>
         </div>
       </header>
 
