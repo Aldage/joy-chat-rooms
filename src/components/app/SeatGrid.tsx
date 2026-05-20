@@ -48,7 +48,7 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
           >
             <div className={`relative ${size} rounded-full flex items-center justify-center transition ${
               occupied
-                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""} ${big && !frame ? "ring-2 ring-gold/60" : ""}`
+                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking sound-waves" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""} ${big && !frame ? "ring-2 ring-gold/60" : ""}`
                 : `bg-card border-2 border-dashed ${s.is_locked ? "border-destructive/60" : "border-border"} ${big ? "ring-1 ring-gold/40" : ""}`
             }`}>
               {occupied ? (

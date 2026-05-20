@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { Coins, Plus, Users, Mic, Crown, Search, Flame } from "lucide-react";
+import { Coins, Plus, Users, Mic, Crown, Search, Flame, Sparkles, TrendingUp } from "lucide-react";
 import { CreateRoomDialog } from "@/components/app/CreateRoomDialog";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ function HomePage() {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [tag, setTag] = useState("Tümü");
   const [openCreate, setOpenCreate] = useState(false);
+  const [topSpenders, setTopSpenders] = useState<{ id: string; display_name: string; coins_earned: number }[]>([]);
 
   const load = async () => {
     const { data: rs } = await supabase
@@ -46,6 +47,11 @@ function HomePage() {
 
   useEffect(() => {
     load();
+    supabase.from("profiles")
+      .select("id,display_name,coins_earned")
+      .order("coins_earned", { ascending: false })
+      .limit(5)
+      .then(({ data }) => setTopSpenders((data ?? []) as any));
     const ch = supabase.channel("rooms-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats" }, () => load())
@@ -85,6 +91,50 @@ function HomePage() {
           </button>
         ))}
       </div>
+
+      {/* Featured event banner */}
+      <div className="px-5 mb-4">
+        <div className="relative bg-gradient-to-r from-primary via-accent to-primary-glow rounded-3xl p-4 shadow-glow overflow-hidden">
+          <div className="absolute -top-8 -right-8 size-32 rounded-full bg-gold/40 blur-3xl animate-pulse" />
+          <div className="relative flex items-center gap-3">
+            <Sparkles className="size-6 text-gold drop-shadow" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-primary-foreground/80 font-bold">Bugünün Etkinliği</p>
+              <p className="text-sm font-display font-bold text-primary-foreground truncate">Hediye gönderene 2x Coin geri! 🎁</p>
+            </div>
+            <span className="text-[10px] font-bold bg-background/30 backdrop-blur text-primary-foreground rounded-full px-2 py-0.5">CANLI</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Top spenders strip */}
+      {topSpenders.length > 0 && (
+        <div className="px-5 mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="size-3.5 text-gold" />
+              <p className="text-xs font-display font-bold">Günün VIP'leri</p>
+            </div>
+            <Link to="/discover" className="text-[10px] text-muted-foreground">Tümü</Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {topSpenders.map((u, i) => (
+              <div key={u.id} className="flex flex-col items-center min-w-[64px]">
+                <div className="relative">
+                  <div className={`size-14 rounded-full p-[2px] ${i===0?"bg-gradient-to-tr from-gold to-amber-500 shadow-glow":"bg-gradient-primary"}`}>
+                    <div className="size-full rounded-full bg-card flex items-center justify-center text-sm font-display font-bold">
+                      {u.display_name?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  </div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full text-[9px] font-bold px-1.5">#{i+1}</span>
+                </div>
+                <p className="text-[10px] font-semibold truncate max-w-[64px] mt-2">{u.display_name}</p>
+                <p className="text-[9px] text-gold flex items-center gap-0.5"><Coins className="size-2.5" />{(u.coins_earned ?? 0).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Rooms grid */}
       <div className="px-5 grid grid-cols-2 gap-3">

@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check } from "lucide-react";
+import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check, Globe } from "lucide-react";
 import { useEffect } from "react";
 import { ALL_ITEMS, findItem, type StoreItem } from "@/lib/store-items";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -41,6 +41,8 @@ function ProfilePage() {
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
   const [saving, setSaving] = useState(false);
   const [inventory, setInventory] = useState<StoreItem[]>([]);
+  const [lang, setLang] = useState<"TR" | "EN" | "DE">("TR");
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -91,13 +93,35 @@ function ProfilePage() {
     <div className="bg-gradient-hero min-h-screen px-5 pt-12 pb-28">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-display font-bold">Profil</h1>
-        <button
-          onClick={async () => { await signOut(); nav({ to: "/login" }); }}
-          className="size-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-          aria-label="Çıkış yap"
-        >
-          <LogOut className="size-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setLangOpen(v => !v)}
+            className="flex items-center gap-1.5 size-10 rounded-full bg-card border border-border hover:bg-secondary transition-colors justify-center"
+            aria-label="Dil seç"
+          >
+            <Globe className="size-4 text-accent" />
+          </button>
+          {langOpen && (
+            <div className="absolute right-12 top-0 z-30 bg-card border border-border rounded-2xl shadow-glow p-1 flex flex-col min-w-[120px] animate-scale-in">
+              {(["TR", "EN", "DE"] as const).map(l => (
+                <button
+                  key={l}
+                  onClick={() => { setLang(l); setLangOpen(false); toast.success(`Dil: ${l} (demo)`); }}
+                  className={`text-left text-xs font-semibold px-3 py-2 rounded-xl transition ${lang===l?"bg-gradient-primary text-primary-foreground":"hover:bg-secondary"}`}
+                >
+                  {l === "TR" ? "🇹🇷 Türkçe" : l === "EN" ? "🇬🇧 English" : "🇩🇪 Deutsch"}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={async () => { await signOut(); nav({ to: "/login" }); }}
+            className="size-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+            aria-label="Çıkış yap"
+          >
+            <LogOut className="size-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Top profile card */}
