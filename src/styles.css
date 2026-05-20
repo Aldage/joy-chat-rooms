@@ -321,4 +321,18 @@
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ===== TikTok-style floating hearts ===== */
+  @keyframes heart-rise {
+    0%   { transform: translate(-50%, 0) scale(0.6) rotate(0deg); opacity: 0; }
+    15%  { transform: translate(-50%, -20px) scale(1.15) rotate(calc(var(--rot) * 0.3)); opacity: 1; }
+    60%  { transform: translate(calc(-50% + var(--dx) * 0.6), -180px) scale(1) rotate(var(--rot)); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), -320px) scale(0.4) rotate(calc(var(--rot) * 1.4)); opacity: 0; }
+  }
+
+  @keyframes flame-pulse {
+    0%, 100% { transform: scale(1);   filter: drop-shadow(0 0 4px oklch(0.8 0.2 40 / 0.7)); }
+    50%      { transform: scale(1.15); filter: drop-shadow(0 0 10px oklch(0.85 0.22 40 / 0.95)); }
+  }
+  .flame-pulse { animation: flame-pulse 1.2s ease-in-out infinite; }
 }
