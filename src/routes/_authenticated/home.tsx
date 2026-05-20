@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { Coins, Plus, Users, Mic, Crown, Search } from "lucide-react";
+import { Coins, Plus, Users, Mic, Crown, Search, Flame } from "lucide-react";
 import { CreateRoomDialog } from "@/components/app/CreateRoomDialog";
 import { toast } from "sonner";
 
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/home")({ component: HomePa
 
 type RoomRow = {
   id: string; title: string; tag: string | null; cover_url: string | null;
-  seat_count: number; owner_id: string;
+  seat_count: number; owner_id: string; popularity?: number;
   owner?: { display_name: string; avatar_url: string | null };
   count?: number;
 };
@@ -27,7 +27,7 @@ function HomePage() {
   const load = async () => {
     const { data: rs } = await supabase
       .from("rooms")
-      .select("id,title,tag,cover_url,seat_count,owner_id")
+      .select("id,title,tag,cover_url,seat_count,owner_id,popularity")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (!rs) return;
@@ -48,6 +48,7 @@ function HomePage() {
     load();
     const ch = supabase.channel("rooms-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "room_seats" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -101,6 +102,9 @@ function HomePage() {
               </span>
               <span className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/40 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                 <Users className="size-2.5" /> {r.count}
+              </span>
+              <span className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/45 backdrop-blur text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <Flame className="size-2.5" /> {(r.popularity ?? 0).toLocaleString()}
               </span>
             </div>
             <p className="font-semibold text-sm truncate">{r.title}</p>
