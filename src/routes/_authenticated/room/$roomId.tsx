@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
-import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
+import { HeartTapper } from "@/components/app/HeartTapper";
+import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -28,6 +29,9 @@ function RoomPage() {
   const [fx, setFx] = useState<GiftFx[]>([]);
   const [chatFx, setChatFx] = useState<ChatFx[]>([]);
   const [giftQueue, setGiftQueue] = useState<GiftEvent[]>([]);
+  // Energy / hearts
+  const [energy, setEnergy] = useState(0);
+  const heartsBucketRef = useRef(0);
   // Chest
   const [chestProgress, setChestProgress] = useState(0);
   const [chestReady, setChestReady] = useState(false);
@@ -305,6 +309,21 @@ function RoomPage() {
   const mySeat = seats.find(s => s.user_id === user?.id);
   const isRoomOwner = !!user && !!room && user.id === room.owner_id;
 
+  const onHeartTap = () => {
+    setEnergy(e => e + 1);
+    heartsBucketRef.current += 1;
+    if (heartsBucketRef.current >= 100) {
+      heartsBucketRef.current = 0;
+      if (!chestClosed) {
+        setChestProgress(p => {
+          const next = Math.min(100, p + 1);
+          if (next >= 100) setChestReady(true);
+          return next;
+        });
+      }
+    }
+  };
+
   const toggleLock = async (s: SeatLite) => {
     if (!isRoomOwner) return;
     await supabase.from("room_seats").update({ is_locked: !s.is_locked }).eq("id", s.id);
@@ -365,6 +384,12 @@ function RoomPage() {
           <span className="text-xs font-semibold">{profile?.coin_balance ?? 0}</span>
         </div>
       </header>
+
+      {/* Energy / Trend score */}
+      <div className="fixed top-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card/80 backdrop-blur border border-accent/40 rounded-full px-3 py-1 shadow-glow pointer-events-none">
+        <Flame className="size-3.5 text-gold flame-pulse" />
+        <span className="text-[11px] font-display font-bold text-gold">{energy}</span>
+      </div>
 
       {/* Seats */}
       <div className="py-4">
@@ -508,6 +533,7 @@ function RoomPage() {
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
           <GiftIcon className="size-4 text-accent-foreground" />
         </button>
+        <HeartTapper onTap={onHeartTap} />
       </footer>
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
