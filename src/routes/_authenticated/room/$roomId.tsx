@@ -742,6 +742,13 @@ function RoomPage() {
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
           <GiftIcon className="size-4 text-accent-foreground" />
         </button>
+        <button
+          onClick={() => setDiceOpen(true)}
+          className="size-11 rounded-full bg-gradient-to-br from-amber-400 via-rose-500 to-fuchsia-600 shadow-glow flex items-center justify-center active:scale-95 transition"
+          title="Şans Zarı"
+        >
+          <Dices className="size-4 text-white drop-shadow" />
+        </button>
         <HeartTapper onTap={onHeartTap} />
       </footer>
 
@@ -764,6 +771,8 @@ function RoomPage() {
       />
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
+      <DiceGame open={diceOpen} onOpenChange={setDiceOpen} roomId={roomId} />
+      <MegaGiftFX event={megaGift} onDone={() => setMegaGift(null)} />
 
       {/* Moderation popover */}
       {modSeat && (
