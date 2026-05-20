@@ -88,6 +88,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_entry_effect: string | null
+          active_frame: string | null
           avatar_url: string | null
           bio: string | null
           coin_balance: number
@@ -99,6 +101,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active_entry_effect?: string | null
+          active_frame?: string | null
           avatar_url?: string | null
           bio?: string | null
           coin_balance?: number
@@ -110,6 +114,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active_entry_effect?: string | null
+          active_frame?: string | null
           avatar_url?: string | null
           bio?: string | null
           coin_balance?: number
@@ -204,6 +210,7 @@ export type Database = {
           is_active: boolean
           owner_id: string
           password: string | null
+          popularity: number
           seat_count: number
           tag: string | null
           title: string
@@ -216,6 +223,7 @@ export type Database = {
           is_active?: boolean
           owner_id: string
           password?: string | null
+          popularity?: number
           seat_count?: number
           tag?: string | null
           title: string
@@ -228,9 +236,37 @@ export type Database = {
           is_active?: boolean
           owner_id?: string
           password?: string | null
+          popularity?: number
           seat_count?: number
           tag?: string | null
           title?: string
+        }
+        Relationships: []
+      }
+      user_items: {
+        Row: {
+          acquired_at: string
+          expires_at: string | null
+          id: string
+          item_id: string
+          item_type: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          expires_at?: string | null
+          id?: string
+          item_id: string
+          item_type: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          expires_at?: string | null
+          id?: string
+          item_id?: string
+          item_type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -257,12 +293,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_room_popularity: {
+        Args: { _delta: number; _room_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      purchase_store_item: {
+        Args: { _cost: number; _item_id: string; _item_type: string }
+        Returns: undefined
       }
     }
     Enums: {
