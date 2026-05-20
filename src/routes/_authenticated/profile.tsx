@@ -3,7 +3,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock } from "lucide-react";
+import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check } from "lucide-react";
+import { useEffect } from "react";
+import { ALL_ITEMS, findItem, type StoreItem } from "@/lib/store-items";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,29 @@ function ProfilePage() {
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
   const [saving, setSaving] = useState(false);
+  const [inventory, setInventory] = useState<StoreItem[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_items").select("item_id").eq("user_id", user.id).then(({ data }) => {
+      const items = (data ?? []).map(d => findItem(d.item_id)).filter(Boolean) as StoreItem[];
+      setInventory(items);
+    });
+  }, [user?.id]);
+
+  const activeFrame = findItem((profile as any)?.active_frame);
+  const activeEntry = findItem((profile as any)?.active_entry_effect);
+
+  const activate = async (item: StoreItem) => {
+    if (!user) return;
+    const col = item.type === "frame" ? "active_frame" : "active_entry_effect";
+    const current = item.type === "frame" ? (profile as any)?.active_frame : (profile as any)?.active_entry_effect;
+    const next = current === item.id ? null : item.id;
+    const { error } = await supabase.from("profiles").update({ [col]: next } as any).eq("id", user.id);
+    if (error) { toast.error(error.message); return; }
+    await refreshProfile();
+    toast.success(next ? `✨ "${item.name}" aktif!` : "Devre dışı bırakıldı");
+  };
 
   const openEdit = () => {
     setName(profile?.display_name ?? "");
