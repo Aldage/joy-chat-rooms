@@ -6,6 +6,7 @@ import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
 import { HeartTapper } from "@/components/app/HeartTapper";
+import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,9 @@ function RoomPage() {
   const [micOn, setMicOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [modSeat, setModSeat] = useState<SeatLite | null>(null);
+  const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(null);
+  const [bannedIds, setBannedIds] = useState<Set<string>>(new Set());
+  const [modIds, setModIds] = useState<Set<string>>(new Set());
   const [pwOpen, setPwOpen] = useState(false);
   const [pwInput, setPwInput] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
@@ -344,6 +348,43 @@ function RoomPage() {
     setModSeat(null);
   };
 
+  // Profile sheet helpers
+  const openProfileForSeat = (s: SeatLite) => {
+    if (!s.user_id) return;
+    setProfileTarget({ userId: s.user_id, seatId: s.id, seatIndex: s.seat_index, isMuted: s.is_muted });
+  };
+  const openProfileForUser = (uid: string) => {
+    const seat = seats.find(x => x.user_id === uid);
+    setProfileTarget(seat
+      ? { userId: uid, seatId: seat.id, seatIndex: seat.seat_index, isMuted: seat.is_muted }
+      : { userId: uid });
+  };
+  const profileMute = async (t: ProfileTarget) => {
+    if (!isRoomOwner || !t.seatId) return;
+    await supabase.from("room_seats").update({ is_muted: !t.isMuted }).eq("id", t.seatId);
+    toast.message(t.isMuted ? "Mikrofon açıldı" : "Kullanıcı susturuldu 🔇");
+    setProfileTarget(null);
+  };
+  const profileKick = async (t: ProfileTarget) => {
+    if (!isRoomOwner || !t.seatId) return;
+    await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", t.seatId);
+    toast.success("Kullanıcı koltuktan indirildi");
+    setProfileTarget(null);
+  };
+  const profileBan = async (t: ProfileTarget) => {
+    if (!isRoomOwner) return;
+    if (t.seatId) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", t.seatId);
+    setBannedIds(prev => new Set(prev).add(t.userId));
+    toast.success("Kullanıcı odadan yasaklandı 🔨");
+    setProfileTarget(null);
+  };
+  const profileMakeMod = (t: ProfileTarget) => {
+    if (!isRoomOwner) return;
+    setModIds(prev => new Set(prev).add(t.userId));
+    toast.success("Moderatör yetkisi verildi 👑");
+    setProfileTarget(null);
+  };
+
   const savePassword = async (val: string | null) => {
     if (!isRoomOwner) return;
     if (val && !/^\d{4}$/.test(val)) { toast.error("Şifre 4 haneli olmalı"); return; }
@@ -399,9 +440,9 @@ function RoomPage() {
           currentUserId={user?.id}
           onSeatClick={takeSeat}
           onLeaveSeat={leaveSeat}
-          onSelectTarget={(uid) => { setTarget(uid); setOpenGift(true); }}
+          onSelectTarget={(uid) => openProfileForUser(uid)}
           onToggleLock={toggleLock}
-          onModerate={(s) => setModSeat(s)}
+          onModerate={(s) => openProfileForSeat(s)}
           targetUserId={target}
         />
         {mySeat && (
@@ -425,11 +466,19 @@ function RoomPage() {
           </div>
         ) : (
           <div key={m.id} className="flex items-start gap-2">
-            <div className="size-7 rounded-full bg-gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0">
+            <button
+              onClick={() => openProfileForUser(m.user_id)}
+              className="size-7 rounded-full bg-gradient-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0 hover:ring-2 hover:ring-accent transition"
+            >
               {profiles[m.user_id]?.display_name?.[0]?.toUpperCase() ?? "?"}
-            </div>
+            </button>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-muted-foreground">{profiles[m.user_id]?.display_name ?? "..."}</p>
+              <button
+                onClick={() => openProfileForUser(m.user_id)}
+                className="text-[11px] text-muted-foreground hover:text-foreground transition"
+              >
+                {profiles[m.user_id]?.display_name ?? "..."}
+              </button>
               <p className="text-sm bg-card border border-border rounded-2xl rounded-tl-sm px-3 py-1.5 inline-block max-w-full break-words">{m.content}</p>
             </div>
           </div>
@@ -533,15 +582,26 @@ function RoomPage() {
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
           <GiftIcon className="size-4 text-accent-foreground" />
         </button>
-        <div className="relative">
-          <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap
-                           text-[9.5px] font-display font-bold px-2 py-0.5 rounded-full
-                           bg-background/70 backdrop-blur border border-accent/50 text-gold glow-text">
-            Bedava Kalpler odayı trende taşır! 🔥
-          </span>
-          <HeartTapper onTap={onHeartTap} />
-        </div>
+        <HeartTapper onTap={onHeartTap} />
       </footer>
+
+      {/* Free-hearts hint (floats above the heart button, well clear of the footer) */}
+      <span className="pointer-events-none fixed right-3 bottom-24 z-40 whitespace-nowrap
+                       text-[10px] font-display font-bold px-2.5 py-1 rounded-full
+                       bg-background/80 backdrop-blur border border-accent/60 text-gold glow-text shadow-glow animate-fade-in">
+        Bedava Kalpler odayı trende taşır! 🔥
+      </span>
+
+      <UserProfileSheet
+        target={profileTarget}
+        viewerId={user?.id}
+        isOwner={isRoomOwner}
+        onClose={() => setProfileTarget(null)}
+        onMute={profileMute}
+        onKickSeat={profileKick}
+        onBan={profileBan}
+        onMakeMod={profileMakeMod}
+      />
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
 
