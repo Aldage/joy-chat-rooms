@@ -300,6 +300,7 @@ function RoomPage() {
       if (seat) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", seat.id);
     }
     localStream.current?.getTracks().forEach(t => t.stop());
+    clearActiveRoom();
     nav({ to: "/home" });
   };
 
