@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/app/BottomNav";
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
@@ -31,7 +32,7 @@ function AuthenticatedLayout() {
   return (
     <ActiveRoomProvider>
       <div className="relative min-h-screen w-full bg-background mx-auto max-w-md">
-        <div className="pb-28">
+        <div key={location.pathname} className="pb-28 animate-route-in">
           <Outlet />
         </div>
         <MiniPlayer />
