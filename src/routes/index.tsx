@@ -69,7 +69,7 @@ function EntryScreen() {
             <Sparkles className="size-12 text-primary-foreground" />
           </div>
         </div>
-        <h1 className="mt-6 text-5xl font-display font-bold tracking-[0.18em] bg-gradient-to-r from-primary-foreground via-primary-glow to-amber-300 bg-clip-text text-transparent">
+        <h1 className="mt-6 text-5xl font-display font-extrabold tracking-[0.2em] koizora-shimmer">
           KOIZORA
         </h1>
         <p className="mt-1 text-[10px] uppercase tracking-[0.4em] text-primary-glow/80">Social · Voice · Live</p>
