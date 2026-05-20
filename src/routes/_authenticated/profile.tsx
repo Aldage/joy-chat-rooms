@@ -193,6 +193,59 @@ function ProfilePage() {
         </div>
       </div>
 
+      {/* Inventory */}
+      <div className="mt-5 bg-gradient-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="size-4 text-accent" />
+            <h3 className="font-display font-bold">Envanterim</h3>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {activeFrame ? `Çerçeve: ${activeFrame.name}` : "Çerçeve: yok"}{" · "}
+            {activeEntry ? `Giriş: ${activeEntry.name}` : "Giriş: yok"}
+          </span>
+        </div>
+        {inventory.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            Henüz eşya yok. <span className="text-gold font-semibold">Cüzdan → VIP Mağaza</span>'dan satın al.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {inventory.map(item => {
+              const Icon = item.icon;
+              const isActive =
+                item.type === "frame"
+                  ? (profile as any)?.active_frame === item.id
+                  : (profile as any)?.active_entry_effect === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => activate(item)}
+                  className={`relative rounded-2xl p-2 border transition text-left ${
+                    isActive
+                      ? "border-gold bg-gold/10 shadow-glow"
+                      : "border-border bg-card hover:border-accent/60"
+                  }`}
+                >
+                  <div className={`aspect-square rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-1.5`}>
+                    <Icon className="size-7 text-white drop-shadow" />
+                  </div>
+                  <p className="text-[10px] font-bold truncate">{item.name}</p>
+                  <p className="text-[9px] text-muted-foreground">
+                    {item.type === "frame" ? "Çerçeve" : "Giriş Efekti"}
+                  </p>
+                  {isActive && (
+                    <span className="absolute -top-1 -right-1 size-5 rounded-full bg-gold flex items-center justify-center shadow-glow">
+                      <Check className="size-3 text-background" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm bg-gradient-card border-border">
