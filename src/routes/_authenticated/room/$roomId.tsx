@@ -5,10 +5,12 @@ import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
+import { MegaGiftFX, type MegaGift } from "@/components/app/MegaGiftFX";
+import { DiceGame } from "@/components/app/DiceGame";
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { useActiveRoom } from "@/lib/active-room-context";
-import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown } from "lucide-react";
+import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown, Dices } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
@@ -67,6 +69,9 @@ function RoomPage() {
   const [sbOpen, setSbOpen] = useState(false);
   const [sfxActive, setSfxActive] = useState<{ emoji: string; label: string } | null>(null);
   const sfxChanRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Dice & mega FX
+  const [diceOpen, setDiceOpen] = useState(false);
+  const [megaGift, setMegaGift] = useState<MegaGift | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
