@@ -5,6 +5,9 @@ import { useAuth } from "@/lib/auth-context";
 import { SeatGrid, type SeatLite } from "@/components/app/SeatGrid";
 import { GiftPicker } from "@/components/app/GiftPicker";
 import { PussCat } from "@/components/app/PussCat";
+import { DesertDancer } from "@/components/app/DesertDancer";
+import { BearHug } from "@/components/app/BearHug";
+import { PaperPlane } from "@/components/app/PaperPlane";
 import { ArrowLeft, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/room/$roomId")({ component
 type Msg = { id: string; user_id: string; content: string; message_type: string; created_at: string; user?: { display_name: string } };
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 type ChatFx = { id: string; text: string };
-type KittenFx = { id: string; from: string };
+type KittenFx = { id: string; from: string; kind: "puss" | "dancer" | "bear" | "plane" };
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -84,11 +87,22 @@ function RoomPage() {
           ? "kendine"
           : (profiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
-        if (g?.name === "Masum Kedi" || g?.name === "Yavru Kedi") {
-          setKittens(prev => [...prev, { id, from: fromName }]);
+        const name = g?.name ?? "";
+        const premiumKind: KittenFx["kind"] | null =
+          name === "Masum Kedi" || name === "Yavru Kedi" ? "puss" :
+          name === "Çöl Dansçısı" ? "dancer" :
+          name === "Ayıcık Kucağı" ? "bear" :
+          name === "Kağıt Uçak Yolculuğu" ? "plane" : null;
+        if (premiumKind) {
+          setKittens(prev => [...prev, { id, from: fromName, kind: premiumKind }]);
           setTimeout(() => setKittens(prev => prev.filter(k => k.id !== id)), 3000);
           const cid = crypto.randomUUID();
-          setChatFx(prev => [...prev, { id: cid, text: `${fromName} odaya dünyalar tatlısı bir kedi saldı! 🐾` }]);
+          const chatText =
+            premiumKind === "puss"   ? `${fromName} odaya dünyalar tatlısı bir kedi saldı! 🐾` :
+            premiumKind === "dancer" ? `${fromName} odaya Çöl Dansçısı hediyesiyle renk kattı! 💃` :
+            premiumKind === "bear"   ? `${fromName} odaya sevgi dolu bir kucaklama gönderdi! 🧸` :
+                                       `${fromName} odayı göklerde uçurdu! ✈️`;
+          setChatFx(prev => [...prev, { id: cid, text: chatText }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
           playMeow();
         } else {
@@ -407,9 +421,12 @@ function RoomPage() {
 
       {/* Premium Masum Kedi FX overlay */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-40">
-        {kittens.map(k => (
-          <PussCat key={k.id} from={k.from} />
-        ))}
+        {kittens.map(k => {
+          if (k.kind === "dancer") return <DesertDancer key={k.id} from={k.from} />;
+          if (k.kind === "bear")   return <BearHug      key={k.id} from={k.from} />;
+          if (k.kind === "plane")  return <PaperPlane   key={k.id} from={k.from} />;
+          return <PussCat key={k.id} from={k.from} />;
+        })}
       </div>
 
       {/* Glowing chat fx (kitten announcement) */}

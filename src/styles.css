@@ -246,6 +246,52 @@
   }
   .chest-ready { animation: chest-shake 0.6s ease-in-out infinite; }
 
+  /* ===== Desert Dancer ===== */
+  .dd-body { animation: dd-sway 1.6s ease-in-out infinite; }
+  @keyframes dd-sway {
+    0%, 100% { transform: rotate(-5deg) translateX(-4px); }
+    50%      { transform: rotate(5deg)  translateX(4px); }
+  }
+  .dd-arm-left  { animation: dd-arm-l 1.6s ease-in-out infinite; }
+  .dd-arm-right { animation: dd-arm-r 1.6s ease-in-out infinite; }
+  @keyframes dd-arm-l {
+    0%, 100% { transform: rotate(-8deg); }
+    50%      { transform: rotate(14deg); }
+  }
+  @keyframes dd-arm-r {
+    0%, 100% { transform: rotate(8deg); }
+    50%      { transform: rotate(-14deg); }
+  }
+
+  /* ===== Bear Hug Hearts ===== */
+  @keyframes heart-float {
+    0%   { opacity: 0; transform: translateY(20px) scale(0.4); }
+    30%  { opacity: 1; transform: translateY(0)   scale(1.1); }
+    70%  { opacity: 1; transform: translateY(-30px) scale(1); }
+    100% { opacity: 0; transform: translateY(-70px) scale(0.6); }
+  }
+  .heart-float { animation: heart-float 2.4s ease-out infinite; opacity: 0; }
+  .bh-girl { animation: bh-peek 2.2s ease-in-out infinite; transform-origin: 140px 90px; }
+  @keyframes bh-peek {
+    0%, 100% { transform: translateY(0)   rotate(-3deg); }
+    50%      { transform: translateY(-3px) rotate(3deg); }
+  }
+
+  /* ===== Paper Plane loop ===== */
+  .plane-loop { animation: plane-loop 2.6s cubic-bezier(.4,.1,.4,1) forwards; }
+  @keyframes plane-loop {
+    0%   { transform: translateX(-120vw) translateY(40px) rotate(-8deg); }
+    35%  { transform: translateX(0)     translateY(-20px) rotate(6deg); }
+    55%  { transform: translateX(0)     translateY(-10px) rotate(-360deg); }
+    80%  { transform: translateX(0)     translateY(0)     rotate(-720deg); }
+    100% { transform: translateX(120vw)  translateY(40px)  rotate(-728deg); }
+  }
+  .pp-arm { animation: pp-wave 0.8s ease-in-out infinite; }
+  @keyframes pp-wave {
+    0%, 100% { transform: rotate(-10deg); }
+    50%      { transform: rotate(20deg); }
+  }
+
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
