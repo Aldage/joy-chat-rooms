@@ -367,7 +367,13 @@ function RoomPage() {
           <ArrowLeft className="size-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold truncate">{room?.title ?? "..."}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="font-display font-bold truncate">{room?.title ?? "..."}</p>
+            <span className="shrink-0 flex items-center gap-1 bg-card/80 backdrop-blur border border-accent/40 rounded-full px-2 py-0.5 shadow-glow">
+              <Flame className="size-3 text-gold flame-pulse" />
+              <span className="text-[11px] font-display font-bold text-gold tabular-nums">{energy}</span>
+            </span>
+          </div>
           <p className="text-[11px] text-muted-foreground flex items-center gap-2">
             <span className="bg-live text-white px-1.5 py-0.5 rounded text-[9px] font-bold">LIVE</span>
             <Users className="size-3" /> {seats.filter(s => s.user_id).length}/{seats.length}
@@ -384,12 +390,6 @@ function RoomPage() {
           <span className="text-xs font-semibold">{profile?.coin_balance ?? 0}</span>
         </div>
       </header>
-
-      {/* Energy / Trend score */}
-      <div className="fixed top-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card/80 backdrop-blur border border-accent/40 rounded-full px-3 py-1 shadow-glow pointer-events-none">
-        <Flame className="size-3.5 text-gold flame-pulse" />
-        <span className="text-[11px] font-display font-bold text-gold">{energy}</span>
-      </div>
 
       {/* Seats */}
       <div className="py-4">
@@ -533,7 +533,14 @@ function RoomPage() {
         <button onClick={()=>{ setTarget(null); setOpenGift(true); }} className="size-11 rounded-full bg-accent shadow-glow flex items-center justify-center">
           <GiftIcon className="size-4 text-accent-foreground" />
         </button>
-        <HeartTapper onTap={onHeartTap} />
+        <div className="relative">
+          <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap
+                           text-[9.5px] font-display font-bold px-2 py-0.5 rounded-full
+                           bg-background/70 backdrop-blur border border-accent/50 text-gold glow-text">
+            Bedava Kalpler odayı trende taşır! 🔥
+          </span>
+          <HeartTapper onTap={onHeartTap} />
+        </div>
       </footer>
 
       <GiftPicker open={openGift} onOpenChange={setOpenGift} roomId={roomId} targetUserId={target} />
