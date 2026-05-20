@@ -330,6 +330,17 @@ function RoomPage() {
   const onHeartTap = () => {
     setEnergy(e => e + 1);
     heartsBucketRef.current += 1;
+    popularityBucketRef.current += 1;
+    if (!popularityFlushTimer.current) {
+      popularityFlushTimer.current = setTimeout(() => {
+        const delta = Math.min(500, popularityBucketRef.current);
+        popularityBucketRef.current = 0;
+        popularityFlushTimer.current = null;
+        if (delta > 0) {
+          supabase.rpc("bump_room_popularity" as any, { _room_id: roomId, _delta: delta }).then(() => {});
+        }
+      }, 700);
+    }
     if (heartsBucketRef.current >= 100) {
       heartsBucketRef.current = 0;
       if (!chestClosed) {
