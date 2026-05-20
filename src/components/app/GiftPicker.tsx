@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { Coins } from "lucide-react";
+import { Coins, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 type Gift = { id: string; name: string; emoji: string; cost: number };
@@ -23,7 +23,13 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
   const send = async () => {
     if (!user || !selected) return;
     const receiver = targetUserId ?? user.id;
-    if ((profile?.coin_balance ?? 0) < selected.cost) { toast.error("Yetersiz bakiye"); return; }
+    if ((profile?.coin_balance ?? 0) < selected.cost) {
+      toast.error("Yetersiz Bakiye! Lütfen Cüzdandan Coin Yükleyin", {
+        icon: <AlertTriangle className="size-4 text-destructive" />,
+        duration: 4000,
+      });
+      return;
+    }
     setSending(true);
     const { error } = await supabase.from("gift_transactions").insert({
       room_id: roomId, sender_id: user.id, receiver_id: receiver,
@@ -31,6 +37,10 @@ export function GiftPicker({ open, onOpenChange, roomId, targetUserId }: {
     });
     setSending(false);
     if (error) { toast.error(error.message); return; }
+    // XP kazanımı: her 10 coin = +1 XP (yalnızca gönderici)
+    const xpGain = Math.max(1, Math.floor(selected.cost / 10));
+    const currentXp = (profile as any)?.xp ?? 0;
+    await supabase.from("profiles").update({ xp: currentXp + xpGain }).eq("id", user.id);
     await refreshProfile();
     toast.success(`${selected.emoji} ${selected.name} gönderildi!`);
     setSelected(null); onOpenChange(false);
