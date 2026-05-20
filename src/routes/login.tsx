@@ -81,7 +81,7 @@ function LoginPage() {
           <div className="size-20 rounded-3xl bg-gradient-primary shadow-glow flex items-center justify-center mb-4">
             <Sparkles className="size-10 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-display font-bold">Soulchill</h1>
+          <h1 className="text-3xl font-display font-bold tracking-[0.18em] bg-gradient-to-r from-primary via-primary-glow to-amber-400 bg-clip-text text-transparent">KOIZORA</h1>
           <p className="text-sm text-muted-foreground mt-1">Sesli sohbet et, hediye kazan</p>
         </div>
 
