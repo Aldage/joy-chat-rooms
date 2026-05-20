@@ -91,8 +91,8 @@ function RoomPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (p) => {
         const msg = p.new as Msg;
         if (!profiles[msg.user_id]) {
-          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url").eq("id", msg.user_id).single();
-          if (data) setProfiles(prev => ({ ...prev, [data.id]: { display_name: data.display_name, avatar_url: data.avatar_url } }));
+          const { data } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").eq("id", msg.user_id).single();
+          if (data) setProfiles(prev => ({ ...prev, [data.id]: { display_name: data.display_name, avatar_url: data.avatar_url, active_frame: (data as any).active_frame } }));
         }
         setMessages(prev => [...prev, msg]);
       })
