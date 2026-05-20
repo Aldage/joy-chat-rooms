@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check, Globe } from "lucide-react";
+import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check, Globe, Shield } from "lucide-react";
 import { useEffect } from "react";
 import { ALL_ITEMS, findItem, type StoreItem } from "@/lib/store-items";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -43,6 +43,13 @@ function ProfilePage() {
   const [inventory, setInventory] = useState<StoreItem[]>([]);
   const [lang, setLang] = useState<"TR" | "EN" | "DE">("TR");
   const [langOpen, setLangOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -123,6 +130,19 @@ function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {isAdmin && (
+        <button
+          onClick={() => nav({ to: "/admin" })}
+          className="mt-4 w-full flex items-center gap-3 rounded-2xl border border-primary/40 bg-gradient-to-r from-primary/20 to-accent/20 px-4 py-3 shadow-glow hover:scale-[1.01] transition"
+        >
+          <div className="size-9 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <Shield className="size-4 text-primary-foreground" />
+          </div>
+          <span className="font-semibold text-sm">Yönetim Paneli</span>
+          <span className="ml-auto text-xs text-muted-foreground">Admin</span>
+        </button>
+      )}
 
       {/* Top profile card */}
       <div className="relative bg-gradient-card border border-border rounded-3xl p-6 shadow-soft text-center overflow-hidden">
