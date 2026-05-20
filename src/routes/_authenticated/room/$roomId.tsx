@@ -117,7 +117,7 @@ function RoomPage() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "gift_transactions", filter: `room_id=eq.${roomId}` }, async (p) => {
         const tx = p.new as any;
-        const { data: g } = await supabase.from("gifts").select("emoji,name").eq("id", tx.gift_id).single();
+        const { data: g } = await supabase.from("gifts").select("emoji,name,cost").eq("id", tx.gift_id).single();
         if (tx.sender_id === user?.id || tx.receiver_id === user?.id) {
           refreshProfile();
         }
@@ -136,6 +136,14 @@ function RoomPage() {
           : (liveProfiles[tx.receiver_id]?.display_name ?? "yayıncı");
         const id = crypto.randomUUID();
         const name = g?.name ?? "";
+        const cost = g?.cost ?? tx.total_cost ?? 0;
+        // Mega full-screen FX for high-tier gifts (Luxury Car & up: cost >= 1000)
+        if (cost >= 1000) {
+          setMegaGift({
+            id, emoji: g?.emoji ?? "🎁", name: name || "Hediye",
+            from: fromName, to: toName, cost,
+          });
+        }
         const premiumKind: PremiumGiftKind | null =
           name === "Masum Kedi" || name === "Yavru Kedi" ? "puss" :
           name === "Çöl Dansçısı" ? "dancer" :
