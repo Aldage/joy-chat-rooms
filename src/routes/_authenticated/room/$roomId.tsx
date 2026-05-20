@@ -116,7 +116,7 @@ function RoomPage() {
             giftName: name, emoji: g?.emoji ?? "🎁",
           }]);
           const cid = crypto.randomUUID();
-          const chatText = `Sistem: ${fromName}, ${toName}'ya dünyalar tatlısı bir ${name} armağan etti! ✨`;
+          const chatText = `Sistem: ${fromName}, ${toName}'ya muhteşem bir ${name} armağan etti! ✨`;
           setChatFx(prev => [...prev, { id: cid, text: chatText }]);
           setTimeout(() => setChatFx(prev => prev.filter(c => c.id !== cid)), 5000);
           // Inject a styled system message into the chat stream (local only)
@@ -200,7 +200,10 @@ function RoomPage() {
           supabase.from("profiles")
             .update({ coin_balance: (profile?.coin_balance ?? 0) + 5 })
             .eq("id", user.id)
-            .then(() => toast.success("🏆 +5 Coin ve 'Hızlı Parmak' rozeti senin!"));
+            .then(async () => {
+              await refreshProfile();
+              toast.success("🏆 Lounge Bonusu: +5 Coin ve 'Hızlı Parmak' rozeti senin!");
+            });
         }
         if (winnersRef.current.length >= 3) {
           setChestClosed(true);
@@ -569,7 +572,7 @@ function RoomPage() {
         <div className="pointer-events-none fixed top-44 left-1/2 -translate-x-1/2 z-30 animate-scale-in">
           <div className="bg-gradient-to-r from-accent via-primary to-accent px-5 py-2 rounded-full shadow-glow">
             <p className="text-sm font-display font-extrabold text-primary-foreground glow-text whitespace-nowrap">
-              🎁 İTTİFAK HEDİYESİ: İLK TIKLAYAN KAPAR!
+              🎁 LOUNGE BONUSU: İLK TIKLAYAN KAPAR!
             </p>
           </div>
         </div>
