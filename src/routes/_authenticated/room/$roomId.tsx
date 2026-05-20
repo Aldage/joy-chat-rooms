@@ -7,6 +7,7 @@ import { GiftPicker } from "@/components/app/GiftPicker";
 import { GiftOverlay, type GiftEvent, type PremiumGiftKind } from "@/components/app/GiftOverlay";
 import { MegaGiftFX, type MegaGift } from "@/components/app/MegaGiftFX";
 import { DiceGame } from "@/components/app/DiceGame";
+import { PKBattle, type PKBattleHandle } from "@/components/app/PKBattle";
 import { HeartTapper } from "@/components/app/HeartTapper";
 import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfileSheet";
 import { useActiveRoom } from "@/lib/active-room-context";
@@ -72,6 +73,8 @@ function RoomPage() {
   // Dice & mega FX
   const [diceOpen, setDiceOpen] = useState(false);
   const [megaGift, setMegaGift] = useState<MegaGift | null>(null);
+  const pkRef = useRef<PKBattleHandle | null>(null);
+  const welcomedRef = useRef(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
