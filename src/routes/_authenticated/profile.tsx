@@ -131,6 +131,19 @@ function ProfilePage() {
         </div>
       </div>
 
+      {isAdmin && (
+        <button
+          onClick={() => nav({ to: "/admin" })}
+          className="mt-4 w-full flex items-center gap-3 rounded-2xl border border-primary/40 bg-gradient-to-r from-primary/20 to-accent/20 px-4 py-3 shadow-glow hover:scale-[1.01] transition"
+        >
+          <div className="size-9 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <Shield className="size-4 text-primary-foreground" />
+          </div>
+          <span className="font-semibold text-sm">Yönetim Paneli</span>
+          <span className="ml-auto text-xs text-muted-foreground">Admin</span>
+        </button>
+      )}
+
       {/* Top profile card */}
       <div className="relative bg-gradient-card border border-border rounded-3xl p-6 shadow-soft text-center overflow-hidden">
         <div className="absolute -top-10 -right-10 size-40 rounded-full bg-gradient-primary opacity-20 blur-3xl pointer-events-none" />
