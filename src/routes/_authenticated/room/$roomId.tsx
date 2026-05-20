@@ -541,6 +541,9 @@ function RoomPage() {
         </div>
       </header>
 
+      {/* PK Battle banner */}
+      <PKBattle ref={pkRef} />
+
       {/* Seats */}
       <div className="py-4">
         <SeatGrid
