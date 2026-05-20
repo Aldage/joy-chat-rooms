@@ -24,7 +24,7 @@ function RoomPage() {
   const nav = useNavigate();
   const [room, setRoom] = useState<any>(null);
   const [seats, setSeats] = useState<SeatLite[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { display_name: string; avatar_url: string | null }>>({});
+  const [profiles, setProfiles] = useState<Record<string, { display_name: string; avatar_url: string | null; active_frame?: string | null }>>({});
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [openGift, setOpenGift] = useState(false);
@@ -65,9 +65,9 @@ function RoomPage() {
     setEnergy((r as any).popularity ?? 0);
     const { data: s } = await supabase.from("room_seats").select("*").eq("room_id", roomId).order("seat_index");
     const userIds = [...new Set([r.owner_id, ...(s ?? []).map(x => x.user_id).filter(Boolean) as string[]])];
-    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url").in("id", userIds);
+    const { data: profs } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame").in("id", userIds);
     const map: typeof profiles = {};
-    profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url }; });
+    profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame }; });
     setProfiles(map);
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
     const { data: m } = await supabase.from("room_messages").select("*").eq("room_id", roomId).order("created_at", { ascending: true }).limit(100);
