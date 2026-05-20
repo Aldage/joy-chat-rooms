@@ -292,6 +292,33 @@
     50%      { transform: rotate(20deg); }
   }
 
+  /* ===== Premium gift banner ===== */
+  .gift-banner-in {
+    animation: gift-banner-in 0.55s cubic-bezier(.2,.9,.3,1.2) both,
+               gift-banner-out 0.5s ease-in 2.9s both;
+  }
+  @keyframes gift-banner-in {
+    0%   { transform: translate(-50%, -120%); opacity: 0; }
+    100% { transform: translate(-50%, 0);     opacity: 1; }
+  }
+  @keyframes gift-banner-out {
+    0%   { transform: translate(-50%, 0);    opacity: 1; }
+    100% { transform: translate(-50%, -120%); opacity: 0; }
+  }
+  .gift-banner-shine {
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: gift-shine 2.6s ease-in-out 0.4s infinite;
+  }
+  @keyframes gift-shine {
+    0%   { transform: translateX(-100%); }
+    60%  { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
+  }
+  .gift-stage-in { animation: gift-stage-in 0.4s ease-out both, gift-stage-out 0.5s ease-in 2.9s both; }
+  @keyframes gift-stage-in  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes gift-stage-out { from { opacity: 1; } to { opacity: 0; } }
+
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
