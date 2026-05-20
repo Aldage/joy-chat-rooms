@@ -53,6 +53,22 @@ export function DiceGame({ open, onOpenChange, roomId }: {
       room_id: roomId, user_id: user.id, content: text, message_type: "dice",
     });
 
+    // audit log (best-effort)
+    await supabase.from("dice_games" as any).insert({
+      user_id: user.id,
+      room_id: roomId,
+      bet_amount: bet,
+      dice_result: result,
+      is_win: isEven,
+      reward_amount: isEven ? bet : 0,
+    });
+    await supabase.from("coin_transactions" as any).insert({
+      user_id: user.id,
+      amount: delta,
+      type: isEven ? "dice_win" : "dice_bet",
+      description: `Dice ${result} (bet ${bet})`,
+    });
+
     setRolling(false);
     toast[isEven ? "success" : "message"](isEven ? `Kazandın! +${bet}` : `Kaybettin -${bet}`);
   };
