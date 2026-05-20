@@ -431,7 +431,7 @@ function RoomPage() {
           onClick={claimChest}
           disabled={!chestReady || claimedRef.current || chestClosed}
           className={`relative size-14 rounded-2xl flex items-center justify-center text-2xl shadow-glow transition
-            ${chestReady ? "bg-gradient-to-br from-gold to-accent chest-ready" : "bg-card border border-border opacity-90"}`}
+            ${chestReady ? "bg-gradient-to-br from-accent to-primary chest-ready" : "bg-card border border-border opacity-90"}`}
           title={chestReady ? "İlk tıklayan kapar!" : "Sandık doluyor..."}
         >
           <span>{chestClosed ? "✅" : chestReady ? "🎁" : "📦"}</span>
@@ -439,7 +439,7 @@ function RoomPage() {
         </button>
         <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden border border-border">
           <div
-            className={`h-full transition-all duration-300 ${chestReady ? "bg-gradient-to-r from-gold to-accent" : "bg-gradient-primary"}`}
+            className={`h-full transition-all duration-300 ${chestReady ? "bg-gradient-to-r from-accent to-primary" : "bg-gradient-primary"}`}
             style={{ width: `${chestProgress}%` }}
           />
         </div>
@@ -451,7 +451,7 @@ function RoomPage() {
       {/* Chest ready banner */}
       {chestReady && !chestClosed && (
         <div className="pointer-events-none fixed top-44 left-1/2 -translate-x-1/2 z-30 animate-scale-in">
-          <div className="bg-gradient-to-r from-gold via-accent to-primary px-5 py-2 rounded-full shadow-glow">
+          <div className="bg-gradient-to-r from-accent via-primary to-accent px-5 py-2 rounded-full shadow-glow">
             <p className="text-sm font-display font-extrabold text-primary-foreground glow-text">
               🎁 İlk Tıklayan Kapar!
             </p>
