@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LogOut, Edit3, Coins, Trophy, Sparkles, Swords, Crown, Zap, Flame, Star, Lock, ShoppingBag, Check, Globe, Shield } from "lucide-react";
 import { useEffect } from "react";
-import { ALL_ITEMS, findItem, type StoreItem } from "@/lib/store-items";
+import { ALL_ITEMS, VIP_FRAMES, findItem, levelFromXp, type StoreItem } from "@/lib/store-items";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +44,16 @@ function ProfilePage() {
   const [lang, setLang] = useState<"TR" | "EN" | "DE">("TR");
   const [langOpen, setLangOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVip, setIsVip] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
+    supabase.from("user_roles").select("role").eq("user_id", user.id)
+      .then(({ data }) => {
+        const roles = (data ?? []).map((r: any) => r.role);
+        setIsAdmin(roles.includes("admin"));
+        setIsVip(roles.includes("vip") || roles.includes("admin"));
+      });
   }, [user?.id]);
 
   useEffect(() => {
@@ -58,6 +63,10 @@ function ProfilePage() {
       setInventory(items);
     });
   }, [user?.id]);
+
+  const effectiveInventory = isVip
+    ? [...VIP_FRAMES, ...inventory.filter((i) => !VIP_FRAMES.some((v) => v.id === i.id))]
+    : inventory;
 
   const activeFrame = findItem((profile as any)?.active_frame);
   const activeEntry = findItem((profile as any)?.active_entry_effect);
@@ -95,6 +104,9 @@ function ProfilePage() {
   };
 
   const earned = profile?.coins_earned ?? 0;
+  const xp = (profile as any)?.xp ?? 0;
+  const { level, current, next } = levelFromXp(xp);
+  const pct = Math.min(100, Math.round((current / next) * 100));
 
   return (
     <div className="bg-gradient-hero min-h-screen px-5 pt-12 pb-28">
@@ -167,6 +179,28 @@ function ProfilePage() {
 
         <h2 className="mt-4 text-2xl font-display font-bold">{profile?.display_name}</h2>
         <p className="text-xs text-muted-foreground mt-1 font-mono">ID: #{user?.id.slice(0, 8).toUpperCase()}</p>
+
+        {/* Level badge */}
+        <div className="mt-3 mx-auto max-w-xs">
+          <div className="flex items-center justify-between text-[10px] font-semibold mb-1">
+            <span className="flex items-center gap-1.5">
+              <span className="size-6 rounded-md bg-gradient-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shadow-glow">
+                {level}
+              </span>
+              <span className="text-foreground">Seviye {level}</span>
+              {isVip && (
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[9px] uppercase tracking-wide">VIP</span>
+              )}
+            </span>
+            <span className="text-muted-foreground font-mono">{current}/{next} XP</span>
+          </div>
+          <div className="h-2 rounded-full bg-secondary overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary via-accent to-primary-glow transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
 
         <div className="mt-4 bg-secondary/60 border border-border rounded-2xl px-4 py-3 text-left">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Biyografi</p>
@@ -249,13 +283,13 @@ function ProfilePage() {
             {activeEntry ? `Giriş: ${activeEntry.name}` : "Giriş: yok"}
           </span>
         </div>
-        {inventory.length === 0 ? (
+        {effectiveInventory.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">
             Henüz eşya yok. <span className="text-gold font-semibold">Cüzdan → VIP Mağaza</span>'dan satın al.
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {inventory.map(item => {
+            {effectiveInventory.map(item => {
               const Icon = item.icon;
               const isActive =
                 item.type === "frame"
@@ -268,7 +302,9 @@ function ProfilePage() {
                   className={`relative rounded-2xl p-2 border transition text-left ${
                     isActive
                       ? "border-gold bg-gold/10 shadow-glow"
-                      : "border-border bg-card hover:border-accent/60"
+                      : item.vipOnly
+                        ? "border-amber-400/40 bg-amber-500/5 hover:border-amber-300"
+                        : "border-border bg-card hover:border-accent/60"
                   }`}
                 >
                   <div className={`aspect-square rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-1.5`}>
@@ -276,7 +312,7 @@ function ProfilePage() {
                   </div>
                   <p className="text-[10px] font-bold truncate">{item.name}</p>
                   <p className="text-[9px] text-muted-foreground">
-                    {item.type === "frame" ? "Çerçeve" : "Giriş Efekti"}
+                    {item.vipOnly ? "VIP Çerçeve" : item.type === "frame" ? "Çerçeve" : "Giriş Efekti"}
                   </p>
                   {isActive && (
                     <span className="absolute -top-1 -right-1 size-5 rounded-full bg-gold flex items-center justify-center shadow-glow">
