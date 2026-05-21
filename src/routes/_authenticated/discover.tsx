@@ -140,7 +140,7 @@ function Discover() {
                     <span className="absolute top-2 left-2 flex items-center gap-1 bg-live text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                       <span className="size-1.5 rounded-full bg-white animate-pulse" /> LIVE
                     </span>
-                    {r.password && (
+                    {r.has_password && (
                       <span className="absolute top-2 right-2 size-6 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
                         <Lock className="size-3 text-gold" />
                       </span>
