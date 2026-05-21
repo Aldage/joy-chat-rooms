@@ -27,6 +27,8 @@ function AdminPage() {
   const [vips, setVips] = useState<Profile[]>([]);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [vipIds, setVipIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const deleteUserFn = useServerFn(deleteUserAccount);
 
@@ -54,15 +56,42 @@ function AdminPage() {
       setProfiles(map);
     }
     await loadVips();
+    await loadAllUsers();
     setLoading(false);
   };
 
   const loadVips = async () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "vip");
     const ids = (roles ?? []).map((r: any) => r.user_id);
+    setVipIds(new Set(ids));
     if (!ids.length) { setVips([]); return; }
     const { data: p } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids);
     setVips((p ?? []) as Profile[]);
+  };
+
+  const loadAllUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url")
+      .order("display_name", { ascending: true })
+      .limit(200);
+    setAllUsers((data ?? []) as Profile[]);
+  };
+
+  const kickFromAllRooms = async (uid: string, name: string) => {
+    if (!confirm(`${name} tüm odalardaki koltuklardan atılsın mı?`)) return;
+    setBusy(uid);
+    const { error } = await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("user_id", uid);
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success(`${name} tüm koltuklardan atıldı`);
+    setSeats((prev) => prev.filter((s) => s.user_id !== uid));
+  };
+
+  const toggleVip = async (uid: string, name: string) => {
+    const isVip = vipIds.has(uid);
+    if (isVip) await revokeVip(uid, name);
+    else await grantVip(uid, name);
   };
 
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
