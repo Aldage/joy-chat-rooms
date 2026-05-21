@@ -9,6 +9,12 @@
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
+@keyframes vip-pulse {
+  0%, 100% { box-shadow: 0 0 18px -2px rgba(245, 180, 60, 0.55); }
+  50%      { box-shadow: 0 0 28px 2px  rgba(245, 180, 60, 0.95); }
+}
+.vip-pulse { animation: vip-pulse 2.2s ease-in-out infinite; }
+
 /*
  * Design system definition.
  *

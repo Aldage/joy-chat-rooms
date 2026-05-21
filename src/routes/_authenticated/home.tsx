@@ -24,6 +24,7 @@ function HomePage() {
   const [tag, setTag] = useState("Tümü");
   const [openCreate, setOpenCreate] = useState(false);
   const [topSpenders, setTopSpenders] = useState<{ id: string; display_name: string; coins_earned: number }[]>([]);
+  const [vipIds, setVipIds] = useState<Set<string>>(new Set());
 
   const load = async () => {
     const { data: rs } = await supabase
@@ -51,7 +52,20 @@ function HomePage() {
       .select("id,display_name,coins_earned")
       .order("coins_earned", { ascending: false })
       .limit(5)
-      .then(({ data }) => setTopSpenders((data ?? []) as any));
+      .then(async ({ data }) => {
+        const list = (data ?? []) as any[];
+        setTopSpenders(list);
+        const ids = list.map(u => u.id);
+        if (ids.length) {
+          const { data: roles } = await supabase
+            .from("user_roles").select("user_id,role").in("user_id", ids);
+          const set = new Set<string>();
+          (roles ?? []).forEach((r: any) => {
+            if (r.role === "vip" || r.role === "admin") set.add(r.user_id);
+          });
+          setVipIds(set);
+        }
+      });
     const ch = supabase.channel("rooms-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats" }, () => load())
@@ -121,11 +135,21 @@ function HomePage() {
             {topSpenders.map((u, i) => (
               <div key={u.id} className="flex flex-col items-center min-w-[64px]">
                 <div className="relative">
-                  <div className={`size-14 rounded-full p-[2px] ${i===0?"bg-gradient-to-tr from-gold to-amber-500 shadow-glow":"bg-gradient-primary"}`}>
+                  <div className={`size-14 rounded-full p-[2px] ${
+                    vipIds.has(u.id)
+                      ? "bg-gradient-to-tr from-amber-300 via-gold to-amber-500 shadow-[0_0_22px_-2px_rgba(245,180,60,0.85)] vip-pulse"
+                      : i===0 ? "bg-gradient-to-tr from-gold to-amber-500 shadow-glow" : "bg-gradient-primary"
+                  }`}>
                     <div className="size-full rounded-full bg-card flex items-center justify-center text-sm font-display font-bold">
                       {u.display_name?.[0]?.toUpperCase() ?? "?"}
                     </div>
                   </div>
+                  {vipIds.has(u.id) && (
+                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-gold shadow-[0_2px_8px_rgba(245,180,60,0.7)] border border-amber-200/60">
+                      <Sparkles className="size-2 text-background" />
+                      <span className="text-[8px] font-extrabold tracking-wider text-background">VIP</span>
+                    </span>
+                  )}
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full text-[9px] font-bold px-1.5">#{i+1}</span>
                 </div>
                 <p className="text-[10px] font-semibold truncate max-w-[64px] mt-2">{u.display_name}</p>

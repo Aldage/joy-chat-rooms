@@ -638,6 +638,7 @@ function RoomPage() {
           onToggleLock={toggleLock}
           onModerate={(s) => openProfileForSeat(s)}
           targetUserId={target}
+          vipIds={vipIds}
         />
         {mySeat && (
           <div className="flex justify-center mt-3">
