@@ -102,9 +102,10 @@ function RoomPage() {
     profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
     setProfiles(map);
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
-    const { data: w } = await supabase.from("room_waitlist" as any).select("id,user_id,created_at").eq("room_id", roomId).order("created_at");
-    setWaitlist((w ?? []) as WaitlistEntry[]);
-    const waitingIds = ((w ?? []) as WaitlistEntry[]).map(x => x.user_id).filter(id => !map[id]);
+    const { data: w } = await (supabase as any).from("room_waitlist").select("id,user_id,created_at").eq("room_id", roomId).order("created_at");
+    const wl = (w ?? []) as WaitlistEntry[];
+    setWaitlist(wl);
+    const waitingIds = wl.map(x => x.user_id).filter(id => !map[id]);
     if (waitingIds.length > 0) {
       const { data: wp } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").in("id", waitingIds);
       wp?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
