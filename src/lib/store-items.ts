@@ -9,6 +9,7 @@ export type StoreItem = {
   icon: LucideIcon;
   gradient: string;     // tailwind from-* via-* to-*
   description: string;
+  vipOnly?: boolean;
 };
 
 export const FRAMES: StoreItem[] = [
@@ -43,5 +44,29 @@ export const ENTRIES: StoreItem[] = [
 
 export const ALL_ITEMS: StoreItem[] = [...FRAMES, ...ENTRIES];
 
+// VIP-exclusive frames — automatically unlocked for users with the VIP role.
+// Not purchasable. Surfaced in profile inventory when has_role(user, 'vip') is true.
+export const VIP_FRAMES: StoreItem[] = [
+  { id: "frame_vip_diamond", name: "Elmas VIP", cost: 0, type: "frame",
+    icon: Sparkles, gradient: "from-cyan-300 via-sky-400 to-indigo-500",
+    description: "VIP'lere özel elmas çerçeve", vipOnly: true },
+  { id: "frame_vip_phoenix", name: "Anka Tacı", cost: 0, type: "frame",
+    icon: Flame, gradient: "from-amber-300 via-orange-500 to-rose-600",
+    description: "VIP'lere özel ateş tacı", vipOnly: true },
+  { id: "frame_vip_royal", name: "Kraliyet VIP", cost: 0, type: "frame",
+    icon: Crown, gradient: "from-yellow-300 via-amber-500 to-fuchsia-600",
+    description: "Saf VIP kraliyet çerçevesi", vipOnly: true },
+];
+
+export const ALL_ITEMS_WITH_VIP: StoreItem[] = [...ALL_ITEMS, ...VIP_FRAMES];
+
+// Level math — derived from XP. Matches dice_play XP awards.
+export function levelFromXp(xp: number): { level: number; current: number; next: number } {
+  const lvl = Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1);
+  const base = (lvl - 1) ** 2 * 50;
+  const next = lvl ** 2 * 50;
+  return { level: lvl, current: xp - base, next: next - base };
+}
+
 export const findItem = (id?: string | null) =>
-  id ? ALL_ITEMS.find(i => i.id === id) ?? null : null;
+  id ? (ALL_ITEMS_WITH_VIP.find(i => i.id === id) ?? null) : null;
