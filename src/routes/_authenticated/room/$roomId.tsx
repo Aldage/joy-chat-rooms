@@ -13,6 +13,7 @@ import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfi
 import { useActiveRoom } from "@/lib/active-room-context";
 import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown, Dices } from "lucide-react";
 import { toast } from "sonner";
+import { ClientRateLimiter } from "@/lib/sanitize";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
 
