@@ -12,6 +12,67 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: AdminPage });
 
+function StatsPanel({ stats }: { stats: { daily: { day: string; count: number }[]; top_rooms: { id: string; title: string; popularity: number; tag: string | null; owner_name: string | null }[]; totals: { users: number; rooms_active: number; vips: number } } }) {
+  const max = Math.max(1, ...stats.daily.map((d) => d.count));
+  const today = stats.daily[stats.daily.length - 1]?.count ?? 0;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-xl bg-secondary/50 p-2">
+          <p className="text-lg font-bold">{stats.totals.users}</p>
+          <p className="text-[10px] text-muted-foreground">Kullanıcı</p>
+        </div>
+        <div className="rounded-xl bg-secondary/50 p-2">
+          <p className="text-lg font-bold">{stats.totals.rooms_active}</p>
+          <p className="text-[10px] text-muted-foreground">Aktif Oda</p>
+        </div>
+        <div className="rounded-xl bg-secondary/50 p-2">
+          <p className="text-lg font-bold text-amber-400">{stats.totals.vips}</p>
+          <p className="text-[10px] text-muted-foreground">VIP</p>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-baseline justify-between mb-2">
+          <p className="text-xs font-semibold">Günlük Aktif Kullanıcılar (14g)</p>
+          <p className="text-xs text-muted-foreground">Bugün: <span className="text-foreground font-semibold">{today}</span></p>
+        </div>
+        <div className="flex items-end gap-1 h-24">
+          {stats.daily.map((d) => {
+            const h = Math.max(2, Math.round((d.count / max) * 96));
+            const isToday = d.day === stats.daily[stats.daily.length - 1].day;
+            return (
+              <div key={d.day} className="flex-1 flex flex-col items-center gap-1" title={`${d.day}: ${d.count}`}>
+                <div
+                  className={`w-full rounded-t-md transition ${isToday ? "bg-gradient-to-t from-primary to-accent" : "bg-primary/30"}`}
+                  style={{ height: `${h}px` }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+          <span>{stats.daily[0]?.day.slice(5)}</span>
+          <span>{stats.daily[stats.daily.length - 1]?.day.slice(5)}</span>
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-semibold mb-2">En Popüler Odalar</p>
+        {stats.top_rooms.length === 0 && <p className="text-xs text-muted-foreground">Aktif oda yok.</p>}
+        <div className="space-y-1.5">
+          {stats.top_rooms.map((r, i) => (
+            <div key={r.id} className="flex items-center gap-2 text-xs">
+              <span className="size-5 rounded-md bg-gradient-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
+              <span className="flex-1 truncate font-medium">{r.title}</span>
+              <span className="text-muted-foreground text-[10px]">{r.owner_name ?? "—"}</span>
+              <span className="text-gold font-mono">⭐ {r.popularity}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Room = { id: string; title: string; tag: string | null; popularity: number; owner_id: string; created_at: string };
 type Seat = { id: string; room_id: string; seat_index: number; user_id: string | null };
 type Profile = { id: string; display_name: string; avatar_url: string | null };
