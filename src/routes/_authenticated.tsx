@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { BottomNav } from "@/components/app/BottomNav";
 import { MiniPlayer } from "@/components/app/MiniPlayer";
+import { AnnouncementBanner } from "@/components/app/AnnouncementBanner";
 import { ActiveRoomProvider } from "@/lib/active-room-context";
 import { Sparkles } from "lucide-react";
 
@@ -32,6 +33,7 @@ function AuthenticatedLayout() {
   return (
     <ActiveRoomProvider>
       <div className="relative min-h-screen w-full bg-background mx-auto max-w-md">
+        <AnnouncementBanner />
         <div key={location.pathname} className="pb-28 animate-route-in">
           <Outlet />
         </div>
