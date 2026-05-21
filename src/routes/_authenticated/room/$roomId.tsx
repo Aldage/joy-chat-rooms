@@ -431,7 +431,39 @@ function RoomPage() {
     const current = seats.find(x => x.user_id === user.id);
     if (current) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", current.id);
     await supabase.from("room_seats").update({ user_id: user.id, is_muted: true }).eq("id", s.id);
+    // dequeue the user from waitlist if present
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", user.id);
     toast.success(`#${s.seat_index + 1} koltuğuna oturdun`);
+  };
+
+  const joinWaitlist = async () => {
+    if (!user) return;
+    if (seats.some(s => s.user_id === user.id)) { toast.message("Zaten koltuktasın"); return; }
+    if (waitlist.some(w => w.user_id === user.id)) { toast.message("Zaten sıradasın"); return; }
+    const { error } = await (supabase as any).from("room_waitlist").insert({ room_id: roomId, user_id: user.id });
+    if (error) { toast.error("Sıraya alınamadı"); return; }
+    toast.success("Bekleme sırasına alındın 🙋");
+  };
+
+  const leaveWaitlist = async (uid?: string) => {
+    const target = uid ?? user?.id;
+    if (!target) return;
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", target);
+  };
+
+  const promoteFromWaitlist = async (uid: string) => {
+    if (!user) return;
+    const empty = seats.find(s => !s.user_id && !s.is_locked && s.seat_index < STAGE_SEAT_COUNT);
+    if (!empty) { toast.error("Sahnede boş koltuk yok"); return; }
+    if (uid === user.id) {
+      await takeSeat(empty);
+      return;
+    }
+    // owner/admin promoting someone else
+    if (!isRoomOwner) { toast.error("Yetkin yok"); return; }
+    await supabase.from("room_seats").update({ user_id: uid, is_muted: true }).eq("id", empty.id);
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", uid);
+    toast.success("Kullanıcı sahneye alındı 🎤");
   };
 
   const leaveSeat = async (s?: SeatLite) => {
