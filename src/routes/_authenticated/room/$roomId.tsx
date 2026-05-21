@@ -21,6 +21,7 @@ type Msg = { id: string; user_id: string; content: string; message_type: string;
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 type ChatFx = { id: string; text: string };
 type ProfileLite = { display_name: string; avatar_url: string | null; active_frame?: string | null; xp?: number };
+type WaitlistEntry = { id: string; user_id: string; created_at: string };
 
 const SFX_LIST: { emoji: string; label: string }[] = [
   { emoji: "👏", label: "Alkış" },
@@ -39,6 +40,7 @@ function RoomPage() {
   const [room, setRoom] = useState<any>(null);
   const [seats, setSeats] = useState<SeatLite[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   // Client-side anti-spam: max 5 messages per 6s. UX guard only — RLS still
@@ -100,6 +102,14 @@ function RoomPage() {
     profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
     setProfiles(map);
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
+    const { data: w } = await supabase.from("room_waitlist" as any).select("id,user_id,created_at").eq("room_id", roomId).order("created_at");
+    setWaitlist((w ?? []) as WaitlistEntry[]);
+    const waitingIds = ((w ?? []) as WaitlistEntry[]).map(x => x.user_id).filter(id => !map[id]);
+    if (waitingIds.length > 0) {
+      const { data: wp } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").in("id", waitingIds);
+      wp?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
+      setProfiles({ ...map });
+    }
     const { data: m } = await supabase.from("room_messages").select("*").eq("room_id", roomId).order("created_at", { ascending: true }).limit(100);
     setMessages((m ?? []) as Msg[]);
     setActiveRoom({
