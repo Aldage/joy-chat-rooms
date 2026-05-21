@@ -294,6 +294,46 @@ function AdminPage() {
           </div>
         ))}
       </section>
+
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Users className="size-4" /> Tüm Kullanıcılar ({allUsers.length})
+        </h2>
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border">
+          {allUsers.map((u) => {
+            const isVip = vipIds.has(u.id);
+            return (
+              <div key={u.id} className="flex items-center gap-2 p-3">
+                {u.avatar_url
+                  ? <img src={u.avatar_url} alt="" className="size-8 rounded-full" />
+                  : <div className="size-8 rounded-full bg-secondary" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium">{u.display_name}</span>
+                    {isVip && <Crown className="size-3 text-amber-400" />}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">#{u.id.slice(0, 8)}</p>
+                </div>
+                <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => kickFromAllRooms(u.id, u.display_name)}>
+                  <UserX className="size-3.5" /> At
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isVip ? "secondary" : "outline"}
+                  disabled={busy === u.id}
+                  onClick={() => toggleVip(u.id, u.display_name)}
+                  title={isVip ? "VIP Kaldır" : "VIP Yap"}
+                >
+                  <Crown className={`size-3.5 ${isVip ? "text-amber-400" : ""}`} />
+                </Button>
+                <Button size="sm" variant="destructive" disabled={busy === u.id || u.id === user?.id} onClick={() => deleteUser(u.id, u.display_name)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
