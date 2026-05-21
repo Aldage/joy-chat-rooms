@@ -671,7 +671,7 @@ function RoomPage() {
               >
                 {(() => {
                   const lvl = levelOf(profiles[m.user_id]?.xp);
-                  const vip = m.user_id === room?.owner_id || modIds.has(m.user_id);
+                  const vip = m.user_id === room?.owner_id || modIds.has(m.user_id) || vipIds.has(m.user_id);
                   return (
                     <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none ${
                       vip
@@ -687,7 +687,11 @@ function RoomPage() {
                     </span>
                   );
                 })()}
-                <span>{profiles[m.user_id]?.display_name ?? "..."}</span>
+                <span className={vipIds.has(m.user_id) || m.user_id === room?.owner_id
+                  ? "bg-gradient-to-r from-gold via-amber-400 to-orange-400 bg-clip-text text-transparent font-bold"
+                  : ""}>
+                  {profiles[m.user_id]?.display_name ?? "..."}
+                </span>
               </button>
               <p className="text-sm bg-card border border-border rounded-2xl rounded-tl-sm px-3 py-1.5 inline-block max-w-full break-words">{m.content}</p>
             </div>
