@@ -31,6 +31,7 @@ const SFX_LIST: { emoji: string; label: string }[] = [
 ];
 
 const levelOf = (xp?: number | null) => Math.floor((xp ?? 0) / 100) + 1;
+const STAGE_SEAT_COUNT = 5;
 
 function RoomPage() {
   const { roomId } = Route.useParams();
