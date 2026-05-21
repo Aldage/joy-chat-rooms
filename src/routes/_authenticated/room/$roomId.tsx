@@ -281,11 +281,10 @@ function RoomPage() {
         // notify
         toast.success(`🎉 ${name} sandıktan ödül kaptı!`);
         if (uid === user.id) {
-          // award +5 coins to self
-          supabase.from("profiles")
-            .update({ coin_balance: (profile?.coin_balance ?? 0) + 5 })
-            .eq("id", user.id)
-            .then(async () => {
+          // award +5 coins via secure RPC
+          supabase.rpc("award_chest_bonus" as any, { _room_id: roomId, _amount: 5 })
+            .then(async ({ error }: { error: { message: string } | null }) => {
+              if (error) { toast.error(error.message); return; }
               await refreshProfile();
               toast.success("🏆 Lounge Bonusu: +5 Coin ve 'Hızlı Parmak' rozeti senin!");
             });
