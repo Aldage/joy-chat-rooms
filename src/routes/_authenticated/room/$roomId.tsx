@@ -64,6 +64,8 @@ function RoomPage() {
   const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(null);
   const [bannedIds, setBannedIds] = useState<Set<string>>(new Set());
   const [modIds, setModIds] = useState<Set<string>>(new Set());
+  const [vipIds, setVipIds] = useState<Set<string>>(new Set());
+  const [entryFx, setEntryFx] = useState<{ id: string; name: string } | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
   const [pwInput, setPwInput] = useState("");
   // Soundboard
@@ -103,6 +105,47 @@ function RoomPage() {
   };
 
   useEffect(() => { loadAll(); }, [roomId]);
+
+  // Fetch VIP/admin roles for everyone currently in seats so we can highlight
+  // usernames and play entry effects.
+  useEffect(() => {
+    const userIds = seats.map(s => s.user_id).filter(Boolean) as string[];
+    if (userIds.length === 0) return;
+    supabase.from("user_roles").select("user_id,role").in("user_id", userIds).then(({ data }) => {
+      const set = new Set<string>();
+      (data ?? []).forEach((r: any) => {
+        if (r.role === "vip" || r.role === "admin") set.add(r.user_id);
+      });
+      setVipIds(set);
+    });
+  }, [seats]);
+
+  // Award +1 active minute (+5 XP) every 60s while the user has the room open.
+  useEffect(() => {
+    if (!user || !roomId) return;
+    const t = setInterval(() => {
+      supabase.rpc("award_room_minute" as any, { _room_id: roomId }).then(({ error }) => {
+        if (!error) refreshProfile();
+      });
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [user?.id, roomId, refreshProfile]);
+
+  // Detect newly-seated VIPs and play an entry effect overlay
+  const lastSeenSeatedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const current = new Set(seats.map(s => s.user_id).filter(Boolean) as string[]);
+    const newly = [...current].filter(id => !lastSeenSeatedRef.current.has(id));
+    lastSeenSeatedRef.current = current;
+    if (newly.length === 0) return;
+    for (const id of newly) {
+      if (!vipIds.has(id)) continue;
+      const name = profiles[id]?.display_name ?? "VIP";
+      const fxId = crypto.randomUUID();
+      setEntryFx({ id: fxId, name });
+      setTimeout(() => setEntryFx(prev => (prev?.id === fxId ? null : prev)), 3000);
+    }
+  }, [seats, vipIds, profiles]);
 
   // Welcome bot + periodic tips (local-only system messages)
   useEffect(() => {
@@ -628,7 +671,7 @@ function RoomPage() {
               >
                 {(() => {
                   const lvl = levelOf(profiles[m.user_id]?.xp);
-                  const vip = m.user_id === room?.owner_id || modIds.has(m.user_id);
+                  const vip = m.user_id === room?.owner_id || modIds.has(m.user_id) || vipIds.has(m.user_id);
                   return (
                     <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none ${
                       vip
@@ -644,7 +687,11 @@ function RoomPage() {
                     </span>
                   );
                 })()}
-                <span>{profiles[m.user_id]?.display_name ?? "..."}</span>
+                <span className={vipIds.has(m.user_id) || m.user_id === room?.owner_id
+                  ? "bg-gradient-to-r from-gold via-amber-400 to-orange-400 bg-clip-text text-transparent font-bold"
+                  : ""}>
+                  {profiles[m.user_id]?.display_name ?? "..."}
+                </span>
               </button>
               <p className="text-sm bg-card border border-border rounded-2xl rounded-tl-sm px-3 py-1.5 inline-block max-w-full break-words">{m.content}</p>
             </div>
@@ -682,6 +729,19 @@ function RoomPage() {
           </p>
         ))}
       </div>
+
+      {/* VIP entry effect */}
+      {entryFx && (
+        <div className="pointer-events-none fixed top-36 left-1/2 -translate-x-1/2 z-40 animate-scale-in">
+          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-gold to-orange-500 px-5 py-2 rounded-full shadow-glow border border-amber-200/40">
+            <Crown className="size-4 text-background animate-pulse" />
+            <p className="text-sm font-display font-extrabold text-background glow-text whitespace-nowrap">
+              👑 VIP {entryFx.name} odaya katıldı!
+            </p>
+            <Sparkles className="size-4 text-background animate-pulse" />
+          </div>
+        </div>
+      )}
 
       {/* Treasure Chest */}
       <div className="fixed top-24 right-3 z-30 flex flex-col items-center gap-1 w-16">

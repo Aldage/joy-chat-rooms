@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins, TrendingUp, Crown, Medal, Users, Mic, Radio, Music, Gamepad2, MessageCircle, Lock, Flame } from "lucide-react";
+import { Coins, TrendingUp, Crown, Medal, Users, Mic, Radio, Music, Gamepad2, MessageCircle, Lock, Flame, Timer } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/discover")({ component: Discover });
 
-type Tab = "live" | "board";
+type Tab = "live" | "board" | "active";
 type RoomRow = {
   id: string; title: string; tag: string | null; cover_url: string | null;
   seat_count: number; owner_id: string; has_password?: boolean | null; popularity?: number;
@@ -27,6 +27,7 @@ function Discover() {
   const [cat, setCat] = useState("Tümü");
   const [top, setTop] = useState<any[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
+  const [active, setActive] = useState<any[]>([]);
 
   const loadBoard = async () => {
     const { data } = await supabase
@@ -35,6 +36,11 @@ function Discover() {
       .order("coins_earned", { ascending: false })
       .limit(50);
     setTop(data ?? []);
+  };
+
+  const loadActive = async () => {
+    const { data } = await supabase.rpc("get_active_leaderboard" as any);
+    setActive((data as any[]) ?? []);
   };
 
   const loadRooms = async () => {
@@ -58,11 +64,11 @@ function Discover() {
   };
 
   useEffect(() => {
-    loadBoard(); loadRooms();
+    loadBoard(); loadRooms(); loadActive();
     const ch = supabase.channel("discover")
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => loadRooms())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats" }, () => loadRooms())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => loadBoard())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => { loadBoard(); loadActive(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -83,18 +89,24 @@ function Discover() {
 
       {/* Tabs */}
       <div className="px-5 mb-5">
-        <div className="bg-card border border-border rounded-full p-1 flex relative">
+        <div className="bg-card border border-border rounded-full p-1 flex relative gap-0.5">
           <button
             onClick={() => setTab("live")}
-            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 ${tab==="live"?"bg-gradient-primary text-primary-foreground shadow-glow":"text-muted-foreground"}`}
+            className={`flex-1 py-2.5 rounded-full text-[11px] font-bold transition flex items-center justify-center gap-1 ${tab==="live"?"bg-gradient-primary text-primary-foreground shadow-glow":"text-muted-foreground"}`}
           >
-            <Radio className="size-3.5" /> Canlı Odalar
+            <Radio className="size-3.5" /> Canlı
           </button>
           <button
             onClick={() => setTab("board")}
-            className={`flex-1 py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 ${tab==="board"?"bg-gradient-primary text-primary-foreground shadow-glow":"text-muted-foreground"}`}
+            className={`flex-1 py-2.5 rounded-full text-[11px] font-bold transition flex items-center justify-center gap-1 ${tab==="board"?"bg-gradient-primary text-primary-foreground shadow-glow":"text-muted-foreground"}`}
           >
-            <Crown className="size-3.5" /> Liderlik Tablosu
+            <Crown className="size-3.5" /> Coin
+          </button>
+          <button
+            onClick={() => setTab("active")}
+            className={`flex-1 py-2.5 rounded-full text-[11px] font-bold transition flex items-center justify-center gap-1 ${tab==="active"?"bg-gradient-primary text-primary-foreground shadow-glow":"text-muted-foreground"}`}
+          >
+            <Timer className="size-3.5" /> En Aktif
           </button>
         </div>
       </div>
@@ -185,9 +197,67 @@ function Discover() {
             })}
           </div>
         </>
-      ) : (
+      ) : tab === "board" ? (
         <Leaderboard top={top} />
+      ) : (
+        <ActiveBoard rows={active} />
       )}
+    </div>
+  );
+}
+
+function ActiveBoard({ rows }: { rows: any[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-16 text-sm flex flex-col items-center gap-2">
+        <Timer className="size-8 opacity-50" /> Henüz aktivite verisi yok
+      </div>
+    );
+  }
+  return (
+    <div className="px-5 space-y-2">
+      <p className="text-[11px] text-muted-foreground mb-3 text-center">
+        Odalarda en çok zaman geçiren <span className="text-gold font-semibold">Top 10</span> kullanıcı
+      </p>
+      {rows.map((u, i) => {
+        const rank = i + 1;
+        const minutes = u.active_minutes ?? 0;
+        const hrs = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const isTop3 = rank <= 3;
+        return (
+          <div
+            key={u.id}
+            className={`flex items-center gap-3 rounded-2xl p-3 border transition ${
+              isTop3
+                ? "bg-gradient-to-r from-gold/10 via-amber-500/5 to-transparent border-gold/40 shadow-glow"
+                : "bg-card border-border hover:shadow-glow"
+            }`}
+          >
+            <div className={`size-9 rounded-full flex items-center justify-center text-sm font-display font-bold ${
+              rank === 1 ? "bg-gradient-to-br from-gold to-amber-500 text-background" :
+              rank === 2 ? "bg-gradient-to-br from-zinc-300 to-zinc-500 text-background" :
+              rank === 3 ? "bg-gradient-to-br from-amber-700 to-amber-900 text-background" :
+              "bg-secondary text-muted-foreground"
+            }`}>
+              {rank}
+            </div>
+            <div className="size-10 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground overflow-hidden">
+              {u.avatar_url
+                ? <img src={u.avatar_url} alt="" className="size-full object-cover" />
+                : (u.display_name?.[0]?.toUpperCase() ?? "?")}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{u.display_name}</p>
+              <p className="text-[10px] text-muted-foreground">XP {u.xp?.toLocaleString() ?? 0}</p>
+            </div>
+            <div className="flex items-center gap-1 text-accent text-sm font-semibold">
+              <Timer className="size-3.5" />
+              <span className="tabular-nums">{hrs > 0 ? `${hrs}sa ` : ""}{mins}dk</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
