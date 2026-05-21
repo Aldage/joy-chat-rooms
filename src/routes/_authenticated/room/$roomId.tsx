@@ -13,6 +13,7 @@ import { UserProfileSheet, type ProfileTarget } from "@/components/app/UserProfi
 import { useActiveRoom } from "@/lib/active-room-context";
 import { ArrowLeft, Flame, Gift as GiftIcon, Mic, MicOff, Send, Users, Coins, LogOut, Hand, Lock, Unlock, UserX, VolumeX, Shield, X, Sparkles, Music2, Crown, Dices } from "lucide-react";
 import { toast } from "sonner";
+import { ClientRateLimiter } from "@/lib/sanitize";
 
 export const Route = createFileRoute("/_authenticated/room/$roomId")({ component: RoomPage });
 
@@ -40,6 +41,9 @@ function RoomPage() {
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
+  // Client-side anti-spam: max 5 messages per 6s. UX guard only — RLS still
+  // enforces auth.uid() = user_id on the server.
+  const msgLimiterRef = useRef(new ClientRateLimiter(5, 6_000));
   const [openGift, setOpenGift] = useState(false);
   const [target, setTarget] = useState<string | null>(null);
   const [fx, setFx] = useState<GiftFx[]>([]);
@@ -437,7 +441,14 @@ function RoomPage() {
 
   const sendMsg = async () => {
     if (!input.trim() || !user) return;
-    const content = input.trim();
+    const { sanitizeMessage } = await import("@/lib/sanitize");
+    const content = sanitizeMessage(input);
+    if (!content) { setInput(""); return; }
+    const gate = msgLimiterRef.current.check();
+    if (!gate.ok) {
+      toast.error(`Çok hızlı yazıyorsun! ${Math.ceil(gate.retryInMs / 1000)}sn bekle.`);
+      return;
+    }
     setInput("");
     await supabase.from("room_messages").insert({ room_id: roomId, user_id: user.id, content });
     // Her mesaj +1 XP

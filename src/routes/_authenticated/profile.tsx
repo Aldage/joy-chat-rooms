@@ -91,10 +91,13 @@ function ProfilePage() {
 
   const save = async () => {
     if (!user) return;
+    const { sanitizeDisplayName, sanitizeBio } = await import("@/lib/sanitize");
+    const safeName = sanitizeDisplayName(name) || "Guest";
+    const safeBio  = sanitizeBio(bio);
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: name.trim() || "Guest", bio, avatar_url: avatar })
+      .update({ display_name: safeName, bio: safeBio, avatar_url: avatar })
       .eq("id", user.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
