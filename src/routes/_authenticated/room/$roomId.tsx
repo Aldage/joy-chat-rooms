@@ -703,6 +703,75 @@ function RoomPage() {
             </button>
           </div>
         )}
+        {/* Waiting List (Queue) */}
+        <div className="mt-4 mx-4 rounded-2xl border border-border bg-card/60 backdrop-blur p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Hand className="size-3.5 text-gold" />
+              <p className="text-xs font-display font-bold">Bekleme Sırası</p>
+              <span className="text-[10px] text-muted-foreground tabular-nums">({waitlist.length})</span>
+            </div>
+            {!mySeat && (
+              waitlist.some(w => w.user_id === user?.id) ? (
+                <button onClick={() => leaveWaitlist()} className="text-[11px] font-semibold bg-secondary border border-border rounded-full px-3 py-1 hover:bg-secondary/80">
+                  Sıradan Çık
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    const empty = seats.find(s => !s.user_id && !s.is_locked && s.seat_index < STAGE_SEAT_COUNT);
+                    if (empty) takeSeat(empty); else joinWaitlist();
+                  }}
+                  className="text-[11px] font-bold bg-gradient-primary text-primary-foreground rounded-full px-3 py-1 shadow-glow"
+                >
+                  🎤 Sahneye Katıl
+                </button>
+              )
+            )}
+          </div>
+          {waitlist.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">Sırada kimse yok. İlk sen ol!</p>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {waitlist.map((w, idx) => {
+                const p = profiles[w.user_id];
+                const isMe = w.user_id === user?.id;
+                return (
+                  <div key={w.id} className="shrink-0 flex flex-col items-center gap-1 w-16">
+                    <div className="relative">
+                      <button
+                        onClick={() => openProfileForUser(w.user_id)}
+                        className="size-12 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-glow"
+                      >
+                        {p?.display_name?.[0]?.toUpperCase() ?? "?"}
+                      </button>
+                      <span className="absolute -top-1 -left-1 size-5 rounded-full bg-gold text-background text-[10px] font-extrabold flex items-center justify-center border border-background">
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <p className="text-[10px] truncate max-w-[64px] text-center">{p?.display_name ?? "..."}</p>
+                    {isRoomOwner && !isMe && (
+                      <button
+                        onClick={() => promoteFromWaitlist(w.user_id)}
+                        className="text-[9px] font-bold bg-accent/30 hover:bg-accent/50 text-accent-foreground rounded-full px-1.5 py-0.5"
+                      >
+                        Yükselt
+                      </button>
+                    )}
+                    {isMe && (
+                      <button
+                        onClick={() => promoteFromWaitlist(w.user_id)}
+                        className="text-[9px] font-bold bg-gradient-primary text-primary-foreground rounded-full px-1.5 py-0.5"
+                      >
+                        Otur
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Chat */}
