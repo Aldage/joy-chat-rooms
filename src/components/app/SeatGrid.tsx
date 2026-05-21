@@ -1,4 +1,4 @@
-import { Mic, MicOff, Lock, Plus, Crown } from "lucide-react";
+import { Mic, MicOff, Lock, Plus, Crown, Sparkles } from "lucide-react";
 import { findItem } from "@/lib/store-items";
 
 export type SeatLite = {
@@ -11,7 +11,7 @@ export type SeatLite = {
   speaking?: boolean;
 };
 
-export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSeat, onSelectTarget, onModerate, onToggleLock, targetUserId }: {
+export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSeat, onSelectTarget, onModerate, onToggleLock, targetUserId, vipIds }: {
   seats: SeatLite[];
   ownerId: string;
   currentUserId?: string | null;
@@ -21,6 +21,7 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
   onModerate?: (s: SeatLite) => void;
   onToggleLock?: (s: SeatLite) => void;
   targetUserId?: string | null;
+  vipIds?: Set<string>;
 }) {
   const viewerIsOwner = !!currentUserId && currentUserId === ownerId;
   const vipSeats = seats.slice(0, 2);
@@ -31,6 +32,7 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
         const isOwner = s.user_id === ownerId;
         const isTarget = targetUserId === s.user_id;
         const isSelf = currentUserId && s.user_id === currentUserId;
+        const isVip = !!(s.user_id && vipIds?.has(s.user_id));
         const frame = findItem(s.user?.active_frame);
         const size = big ? "size-20" : "size-16";
         const letter = big ? "text-2xl" : "text-xl";
@@ -48,11 +50,11 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
           >
             <div className={`relative ${size} rounded-full flex items-center justify-center transition ${
               occupied
-                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking sound-waves" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""} ${big && !frame ? "ring-2 ring-gold/60" : ""}`
+                ? `${frame ? `p-[3px] bg-gradient-to-tr ${frame.gradient} shadow-[0_0_18px_-2px] shadow-current` : isVip ? "p-[3px] bg-gradient-to-tr from-gold via-amber-400 to-amber-200 shadow-[0_0_24px_-2px] shadow-gold vip-pulse" : "bg-gradient-primary shadow-glow"} ${s.speaking && !s.is_muted ? "speaking sound-waves" : ""} ${isTarget ? "ring-4 ring-accent" : ""} ${isSelf ? "ring-2 ring-gold" : ""} ${big && !frame && !isVip ? "ring-2 ring-gold/60" : ""}`
                 : `bg-card border-2 border-dashed ${s.is_locked ? "border-destructive/60" : "border-border"} ${big ? "ring-1 ring-gold/40" : ""}`
             }`}>
               {occupied ? (
-                <div className={`size-full rounded-full flex items-center justify-center ${frame ? "bg-gradient-primary" : ""}`}>
+                <div className={`size-full rounded-full flex items-center justify-center ${frame || isVip ? "bg-gradient-primary" : ""}`}>
                   <span className={`${letter} font-display font-bold text-primary-foreground`}>
                     {s.user?.display_name?.[0]?.toUpperCase() ?? "?"}
                   </span>
@@ -65,6 +67,12 @@ export function SeatGrid({ seats, ownerId, currentUserId, onSeatClick, onLeaveSe
               {isOwner && (
                 <div className="absolute -top-1 -right-1 size-6 rounded-full bg-gold flex items-center justify-center shadow-glow">
                   <Crown className="size-3 text-background" />
+                </div>
+              )}
+              {occupied && isVip && !isOwner && (
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-gold shadow-[0_2px_10px_rgba(245,180,60,0.6)] border border-amber-200/60">
+                  <Sparkles className="size-2 text-background" />
+                  <span className="text-[8px] font-extrabold tracking-wider text-background">VIP</span>
                 </div>
               )}
               {occupied && s.is_locked && (
