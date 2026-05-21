@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/discover")({ component: Di
 type Tab = "live" | "board";
 type RoomRow = {
   id: string; title: string; tag: string | null; cover_url: string | null;
-  seat_count: number; owner_id: string; password?: string | null; popularity?: number;
+  seat_count: number; owner_id: string; has_password?: boolean | null; popularity?: number;
   owner?: { display_name: string; avatar_url: string | null };
   count?: number;
 };
@@ -40,7 +40,7 @@ function Discover() {
   const loadRooms = async () => {
     const { data: rs } = await supabase
       .from("rooms")
-      .select("id,title,tag,cover_url,seat_count,owner_id,password,popularity")
+      .select("id,title,tag,cover_url,seat_count,owner_id,has_password,popularity")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (!rs) return;
