@@ -437,7 +437,14 @@ function RoomPage() {
 
   const sendMsg = async () => {
     if (!input.trim() || !user) return;
-    const content = input.trim();
+    const { sanitizeMessage } = await import("@/lib/sanitize");
+    const content = sanitizeMessage(input);
+    if (!content) { setInput(""); return; }
+    const gate = msgLimiterRef.current.check();
+    if (!gate.ok) {
+      toast.error(`Çok hızlı yazıyorsun! ${Math.ceil(gate.retryInMs / 1000)}sn bekle.`);
+      return;
+    }
     setInput("");
     await supabase.from("room_messages").insert({ room_id: roomId, user_id: user.id, content });
     // Her mesaj +1 XP

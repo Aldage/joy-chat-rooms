@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { redirect } from "@tanstack/react-router";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -10,7 +12,26 @@ import { deleteUserAccount } from "@/lib/admin.functions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-export const Route = createFileRoute("/_authenticated/admin")({ component: AdminPage });
+export const Route = createFileRoute("/_authenticated/admin")({
+  /**
+   * Hard route guard: blocks navigation BEFORE the component mounts.
+   * - Not authenticated → redirect to /home
+   * - Authenticated but not admin → redirect to /home
+   * RLS on `user_roles` ensures users can only see their own role rows.
+   */
+  beforeLoad: async () => {
+    const { data: userData } = await supabaseClient.auth.getUser();
+    if (!userData.user) throw redirect({ to: "/home" });
+    const { data, error } = await supabaseClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (error || !data) throw redirect({ to: "/home" });
+  },
+  component: AdminPage,
+});
 
 function StatsPanel({ stats }: { stats: { daily: { day: string; count: number }[]; top_rooms: { id: string; title: string; popularity: number; tag: string | null; owner_name: string | null }[]; totals: { users: number; rooms_active: number; vips: number } } }) {
   const max = Math.max(1, ...stats.daily.map((d) => d.count));
