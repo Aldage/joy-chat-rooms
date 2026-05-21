@@ -210,6 +210,7 @@ export type Database = {
         Row: {
           active_entry_effect: string | null
           active_frame: string | null
+          active_minutes: number
           avatar_url: string | null
           bio: string | null
           coin_balance: number
@@ -218,12 +219,14 @@ export type Database = {
           display_name: string
           id: string
           is_guest: boolean
+          last_daily_bonus_at: string | null
           updated_at: string
           xp: number
         }
         Insert: {
           active_entry_effect?: string | null
           active_frame?: string | null
+          active_minutes?: number
           avatar_url?: string | null
           bio?: string | null
           coin_balance?: number
@@ -232,12 +235,14 @@ export type Database = {
           display_name?: string
           id: string
           is_guest?: boolean
+          last_daily_bonus_at?: string | null
           updated_at?: string
           xp?: number
         }
         Update: {
           active_entry_effect?: string | null
           active_frame?: string | null
+          active_minutes?: number
           avatar_url?: string | null
           bio?: string | null
           coin_balance?: number
@@ -246,6 +251,7 @@ export type Database = {
           display_name?: string
           id?: string
           is_guest?: boolean
+          last_daily_bonus_at?: string | null
           updated_at?: string
           xp?: number
         }
@@ -423,9 +429,21 @@ export type Database = {
         Args: { _amount?: number; _room_id: string }
         Returns: number
       }
+      award_room_minute: { Args: { _room_id: string }; Returns: undefined }
       bump_room_popularity: {
         Args: { _delta: number; _room_id: string }
         Returns: number
+      }
+      claim_daily_bonus: { Args: never; Returns: number }
+      get_active_leaderboard: {
+        Args: never
+        Returns: {
+          active_minutes: number
+          avatar_url: string
+          display_name: string
+          id: string
+          xp: number
+        }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
       get_room_password: { Args: { _room_id: string }; Returns: string }
