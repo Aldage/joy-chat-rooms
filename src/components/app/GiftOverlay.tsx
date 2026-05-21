@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-export type PremiumGiftKind = "puss" | "dancer" | "bear" | "plane";
+export type PremiumGiftKind = "puss" | "dancer" | "bear" | "plane" | "rocket";
 
 export type GiftEvent = {
   id: string;
@@ -21,9 +21,11 @@ export const GIFT_MEDIA: Record<PremiumGiftKind, string> = {
   dancer: "https://media.tenor.com/zVgMTBxXAvIAAAAi/dance-belly-dance.gif",
   bear:   "https://media.tenor.com/jr3vQ2hd83gAAAAi/hugs-bear-hug.gif",
   plane:  "https://media.tenor.com/wM5jU_5gI50AAAAi/paper-airplane.gif",
+  rocket: "", // custom CSS animation, no media URL
 };
 
 const DURATION = 3400;
+const ROCKET_DURATION = 4200;
 const isVideo = (url: string) => /\.(webm|mp4|mov)(\?|$)/i.test(url);
 
 /**
@@ -44,10 +46,11 @@ export function GiftOverlay({ events, onConsumed }: {
     if (active || events.length === 0) return;
     const next = events[0];
     setActive(next);
+    const dur = next.kind === "rocket" ? ROCKET_DURATION : DURATION;
     const t = setTimeout(() => {
       onConsumed(next.id);
       setActive(null);
-    }, DURATION);
+    }, dur);
     return () => clearTimeout(t);
   }, [active, events, onConsumed]);
 
@@ -61,6 +64,7 @@ export function GiftOverlay({ events, onConsumed }: {
   if (!active) return null;
 
   const url = GIFT_MEDIA[active.kind];
+  const isRocket = active.kind === "rocket";
 
   return (
     <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 9999 }}>
@@ -97,7 +101,9 @@ export function GiftOverlay({ events, onConsumed }: {
       {/* Full-screen media stage */}
       <div className="absolute inset-0 flex items-center justify-center gift-stage-in">
         <div className="relative w-full h-full flex items-center justify-center">
-          {isVideo(url) ? (
+          {isRocket ? (
+            <RocketLaunch />
+          ) : isVideo(url) ? (
             <video
               ref={videoRef}
               key={active.id}
@@ -116,6 +122,52 @@ export function GiftOverlay({ events, onConsumed }: {
             />
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Premium CSS rocket launch: countdown flash, exhaust trail, stars, sonic boom. */
+function RocketLaunch() {
+  const stars = Array.from({ length: 40 }).map((_, i) => ({
+    left: Math.random() * 100,
+    top: Math.random() * 100,
+    delay: Math.random() * 1.5,
+    size: 2 + Math.random() * 3,
+    key: i,
+  }));
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Night-sky gradient flash */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,oklch(0.35_0.22_290/0.55),transparent_70%)] animate-fade-in" />
+      {/* Twinkling stars */}
+      {stars.map(s => (
+        <span
+          key={s.key}
+          className="absolute rounded-full bg-white rocket-star"
+          style={{
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            width: s.size,
+            height: s.size,
+            animationDelay: `${s.delay}s`,
+          }}
+        />
+      ))}
+      {/* Shockwave ring */}
+      <div className="absolute left-1/2 bottom-[8%] -translate-x-1/2 rocket-shockwave" />
+      {/* Rocket + flame trail */}
+      <div className="absolute left-1/2 -translate-x-1/2 rocket-fly">
+        <div className="relative flex flex-col items-center">
+          <span className="text-[120px] leading-none drop-shadow-[0_0_30px_rgba(255,180,80,0.9)] rocket-tilt">🚀</span>
+          <div className="rocket-flame" />
+        </div>
+      </div>
+      {/* Sonic boom caption */}
+      <div className="absolute left-1/2 top-[14%] -translate-x-1/2 rocket-boom">
+        <span className="text-2xl md:text-3xl font-display font-extrabold bg-gradient-to-r from-amber-300 via-pink-400 to-violet-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,180,80,0.6)]">
+          🚀 LIFTOFF! 🚀
+        </span>
       </div>
     </div>
   );
