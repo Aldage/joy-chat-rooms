@@ -21,6 +21,7 @@ type Msg = { id: string; user_id: string; content: string; message_type: string;
 type GiftFx = { id: string; emoji: string; from: string; to: string; giftName: string };
 type ChatFx = { id: string; text: string };
 type ProfileLite = { display_name: string; avatar_url: string | null; active_frame?: string | null; xp?: number };
+type WaitlistEntry = { id: string; user_id: string; created_at: string };
 
 const SFX_LIST: { emoji: string; label: string }[] = [
   { emoji: "👏", label: "Alkış" },
@@ -30,6 +31,7 @@ const SFX_LIST: { emoji: string; label: string }[] = [
 ];
 
 const levelOf = (xp?: number | null) => Math.floor((xp ?? 0) / 100) + 1;
+const STAGE_SEAT_COUNT = 5;
 
 function RoomPage() {
   const { roomId } = Route.useParams();
@@ -39,6 +41,7 @@ function RoomPage() {
   const [room, setRoom] = useState<any>(null);
   const [seats, setSeats] = useState<SeatLite[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   // Client-side anti-spam: max 5 messages per 6s. UX guard only — RLS still
@@ -100,6 +103,15 @@ function RoomPage() {
     profs?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
     setProfiles(map);
     setSeats((s ?? []).map(seat => ({ ...seat, user: seat.user_id ? map[seat.user_id] : null })));
+    const { data: w } = await (supabase as any).from("room_waitlist").select("id,user_id,created_at").eq("room_id", roomId).order("created_at");
+    const wl = (w ?? []) as WaitlistEntry[];
+    setWaitlist(wl);
+    const waitingIds = wl.map(x => x.user_id).filter(id => !map[id]);
+    if (waitingIds.length > 0) {
+      const { data: wp } = await supabase.from("profiles").select("id,display_name,avatar_url,active_frame,xp").in("id", waitingIds);
+      wp?.forEach(p => { map[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url, active_frame: (p as any).active_frame, xp: (p as any).xp ?? 0 }; });
+      setProfiles({ ...map });
+    }
     const { data: m } = await supabase.from("room_messages").select("*").eq("room_id", roomId).order("created_at", { ascending: true }).limit(100);
     setMessages((m ?? []) as Msg[]);
     setActiveRoom({
@@ -190,6 +202,7 @@ function RoomPage() {
   useEffect(() => {
     const ch = supabase.channel(`room:${roomId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "room_seats", filter: `room_id=eq.${roomId}` }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "room_waitlist", filter: `room_id=eq.${roomId}` }, () => loadAll())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, (p) => {
         const next = (p.new as any)?.popularity;
         if (typeof next === "number") setEnergy(next);
@@ -419,7 +432,39 @@ function RoomPage() {
     const current = seats.find(x => x.user_id === user.id);
     if (current) await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("id", current.id);
     await supabase.from("room_seats").update({ user_id: user.id, is_muted: true }).eq("id", s.id);
+    // dequeue the user from waitlist if present
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", user.id);
     toast.success(`#${s.seat_index + 1} koltuğuna oturdun`);
+  };
+
+  const joinWaitlist = async () => {
+    if (!user) return;
+    if (seats.some(s => s.user_id === user.id)) { toast.message("Zaten koltuktasın"); return; }
+    if (waitlist.some(w => w.user_id === user.id)) { toast.message("Zaten sıradasın"); return; }
+    const { error } = await (supabase as any).from("room_waitlist").insert({ room_id: roomId, user_id: user.id });
+    if (error) { toast.error("Sıraya alınamadı"); return; }
+    toast.success("Bekleme sırasına alındın 🙋");
+  };
+
+  const leaveWaitlist = async (uid?: string) => {
+    const target = uid ?? user?.id;
+    if (!target) return;
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", target);
+  };
+
+  const promoteFromWaitlist = async (uid: string) => {
+    if (!user) return;
+    const empty = seats.find(s => !s.user_id && !s.is_locked && s.seat_index < STAGE_SEAT_COUNT);
+    if (!empty) { toast.error("Sahnede boş koltuk yok"); return; }
+    if (uid === user.id) {
+      await takeSeat(empty);
+      return;
+    }
+    // owner/admin promoting someone else
+    if (!isRoomOwner) { toast.error("Yetkin yok"); return; }
+    await supabase.from("room_seats").update({ user_id: uid, is_muted: true }).eq("id", empty.id);
+    await (supabase as any).from("room_waitlist").delete().eq("room_id", roomId).eq("user_id", uid);
+    toast.success("Kullanıcı sahneye alındı 🎤");
   };
 
   const leaveSeat = async (s?: SeatLite) => {
@@ -658,6 +703,75 @@ function RoomPage() {
             </button>
           </div>
         )}
+        {/* Waiting List (Queue) */}
+        <div className="mt-4 mx-4 rounded-2xl border border-border bg-card/60 backdrop-blur p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Hand className="size-3.5 text-gold" />
+              <p className="text-xs font-display font-bold">Bekleme Sırası</p>
+              <span className="text-[10px] text-muted-foreground tabular-nums">({waitlist.length})</span>
+            </div>
+            {!mySeat && (
+              waitlist.some(w => w.user_id === user?.id) ? (
+                <button onClick={() => leaveWaitlist()} className="text-[11px] font-semibold bg-secondary border border-border rounded-full px-3 py-1 hover:bg-secondary/80">
+                  Sıradan Çık
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    const empty = seats.find(s => !s.user_id && !s.is_locked && s.seat_index < STAGE_SEAT_COUNT);
+                    if (empty) takeSeat(empty); else joinWaitlist();
+                  }}
+                  className="text-[11px] font-bold bg-gradient-primary text-primary-foreground rounded-full px-3 py-1 shadow-glow"
+                >
+                  🎤 Sahneye Katıl
+                </button>
+              )
+            )}
+          </div>
+          {waitlist.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground text-center py-2">Sırada kimse yok. İlk sen ol!</p>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {waitlist.map((w, idx) => {
+                const p = profiles[w.user_id];
+                const isMe = w.user_id === user?.id;
+                return (
+                  <div key={w.id} className="shrink-0 flex flex-col items-center gap-1 w-16">
+                    <div className="relative">
+                      <button
+                        onClick={() => openProfileForUser(w.user_id)}
+                        className="size-12 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-glow"
+                      >
+                        {p?.display_name?.[0]?.toUpperCase() ?? "?"}
+                      </button>
+                      <span className="absolute -top-1 -left-1 size-5 rounded-full bg-gold text-background text-[10px] font-extrabold flex items-center justify-center border border-background">
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <p className="text-[10px] truncate max-w-[64px] text-center">{p?.display_name ?? "..."}</p>
+                    {isRoomOwner && !isMe && (
+                      <button
+                        onClick={() => promoteFromWaitlist(w.user_id)}
+                        className="text-[9px] font-bold bg-accent/30 hover:bg-accent/50 text-accent-foreground rounded-full px-1.5 py-0.5"
+                      >
+                        Yükselt
+                      </button>
+                    )}
+                    {isMe && (
+                      <button
+                        onClick={() => promoteFromWaitlist(w.user_id)}
+                        className="text-[9px] font-bold bg-gradient-primary text-primary-foreground rounded-full px-1.5 py-0.5"
+                      >
+                        Otur
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Chat */}
