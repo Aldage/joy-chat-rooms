@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Shield, Trash2, UserX, Users, DoorOpen, Loader2, Crown, UserMinus, Search } from "lucide-react";
+import { Shield, Trash2, UserX, Users, DoorOpen, Loader2, Crown, UserMinus, Search, Megaphone, BarChart3, Send } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { deleteUserAccount } from "@/lib/admin.functions";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: AdminPage });
 
@@ -15,6 +16,12 @@ type Room = { id: string; title: string; tag: string | null; popularity: number;
 type Seat = { id: string; room_id: string; seat_index: number; user_id: string | null };
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type RoleRow = { user_id: string; role: string };
+type Announcement = { id: string; message: string; level: string; created_at: string; expires_at: string; is_active: boolean };
+type StatsData = {
+  daily: { day: string; count: number }[];
+  top_rooms: { id: string; title: string; popularity: number; tag: string | null; owner_name: string | null }[];
+  totals: { users: number; rooms_active: number; vips: number };
+};
 
 function AdminPage() {
   const { user } = useAuth();
@@ -30,6 +37,12 @@ function AdminPage() {
   const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [vipIds, setVipIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [annMsg, setAnnMsg] = useState("");
+  const [annLevel, setAnnLevel] = useState<"info" | "warning" | "event">("info");
+  const [annHours, setAnnHours] = useState(24);
+  const [sendingAnn, setSendingAnn] = useState(false);
+  const [stats, setStats] = useState<StatsData | null>(null);
   const deleteUserFn = useServerFn(deleteUserAccount);
 
   useEffect(() => {
@@ -57,6 +70,8 @@ function AdminPage() {
     }
     await loadVips();
     await loadAllUsers();
+    await loadAnnouncements();
+    await loadStats();
     setLoading(false);
   };
 
@@ -76,6 +91,44 @@ function AdminPage() {
       .order("display_name", { ascending: true })
       .limit(200);
     setAllUsers((data ?? []) as Profile[]);
+  };
+
+  const loadAnnouncements = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, message, level, created_at, expires_at, is_active")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setAnnouncements((data ?? []) as Announcement[]);
+  };
+
+  const loadStats = async () => {
+    const { data, error } = await supabase.rpc("get_admin_stats" as any);
+    if (error) { console.error(error); return; }
+    setStats(data as unknown as StatsData);
+  };
+
+  const sendAnnouncement = async () => {
+    if (!user || !annMsg.trim()) return;
+    setSendingAnn(true);
+    const expires = new Date(Date.now() + Math.max(1, annHours) * 3600 * 1000).toISOString();
+    const { error } = await supabase.from("announcements").insert({
+      message: annMsg.trim(),
+      level: annLevel,
+      created_by: user.id,
+      expires_at: expires,
+    });
+    setSendingAnn(false);
+    if (error) return toast.error(error.message);
+    toast.success("📢 Duyuru yayınlandı");
+    setAnnMsg("");
+    loadAnnouncements();
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    const { error } = await supabase.from("announcements").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   };
 
   const kickFromAllRooms = async (uid: string, name: string) => {
@@ -189,6 +242,86 @@ function AdminPage() {
           {loading ? <Loader2 className="size-4 animate-spin" /> : "Yenile"}
         </Button>
       </header>
+
+      {/* Live Stats */}
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <BarChart3 className="size-4 text-accent" /> Canlı İstatistikler
+        </h2>
+        {stats && <StatsPanel stats={stats} />}
+      </section>
+
+      {/* Global Announcements */}
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Megaphone className="size-4 text-primary" /> Global Duyurular
+        </h2>
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <Textarea
+            value={annMsg}
+            onChange={(e) => setAnnMsg(e.target.value.slice(0, 500))}
+            placeholder="Tüm kullanıcılara gönderilecek mesaj..."
+            rows={3}
+            maxLength={500}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-xl border border-border overflow-hidden text-xs">
+              {(["info", "warning", "event"] as const).map((lv) => (
+                <button
+                  key={lv}
+                  onClick={() => setAnnLevel(lv)}
+                  className={`px-3 py-1.5 font-semibold transition ${annLevel === lv ? "bg-gradient-primary text-primary-foreground" : "bg-secondary"}`}
+                >
+                  {lv === "info" ? "Bilgi" : lv === "warning" ? "Uyarı" : "Etkinlik"}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-muted-foreground">Süre:</span>
+              <Input
+                type="number"
+                min={1}
+                max={168}
+                value={annHours}
+                onChange={(e) => setAnnHours(Number(e.target.value) || 24)}
+                className="h-8 w-16 text-center"
+              />
+              <span className="text-muted-foreground">saat</span>
+            </div>
+            <Button
+              size="sm"
+              onClick={sendAnnouncement}
+              disabled={sendingAnn || !annMsg.trim()}
+              className="ml-auto bg-gradient-primary"
+            >
+              {sendingAnn ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              Yayınla
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">{annMsg.length}/500</p>
+        </div>
+
+        {announcements.length > 0 && (
+          <div className="space-y-2">
+            {announcements.map((a) => {
+              const expired = new Date(a.expires_at).getTime() < Date.now();
+              return (
+                <div key={a.id} className={`rounded-xl border p-3 flex items-start gap-2 ${expired ? "border-border bg-card/50 opacity-60" : "border-primary/30 bg-card"}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${
+                    a.level === "warning" ? "bg-amber-500/20 text-amber-400" :
+                    a.level === "event" ? "bg-pink-500/20 text-pink-400" :
+                    "bg-primary/20 text-primary"
+                  }`}>{a.level}</span>
+                  <p className="flex-1 text-xs leading-relaxed">{a.message}</p>
+                  <Button size="sm" variant="ghost" onClick={() => deleteAnnouncement(a.id)} className="size-7 p-0">
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
