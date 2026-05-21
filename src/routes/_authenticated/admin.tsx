@@ -27,6 +27,8 @@ function AdminPage() {
   const [vips, setVips] = useState<Profile[]>([]);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [vipIds, setVipIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const deleteUserFn = useServerFn(deleteUserAccount);
 
@@ -54,15 +56,42 @@ function AdminPage() {
       setProfiles(map);
     }
     await loadVips();
+    await loadAllUsers();
     setLoading(false);
   };
 
   const loadVips = async () => {
     const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "vip");
     const ids = (roles ?? []).map((r: any) => r.user_id);
+    setVipIds(new Set(ids));
     if (!ids.length) { setVips([]); return; }
     const { data: p } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids);
     setVips((p ?? []) as Profile[]);
+  };
+
+  const loadAllUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url")
+      .order("display_name", { ascending: true })
+      .limit(200);
+    setAllUsers((data ?? []) as Profile[]);
+  };
+
+  const kickFromAllRooms = async (uid: string, name: string) => {
+    if (!confirm(`${name} tüm odalardaki koltuklardan atılsın mı?`)) return;
+    setBusy(uid);
+    const { error } = await supabase.from("room_seats").update({ user_id: null, is_muted: false }).eq("user_id", uid);
+    setBusy(null);
+    if (error) return toast.error(error.message);
+    toast.success(`${name} tüm koltuklardan atıldı`);
+    setSeats((prev) => prev.filter((s) => s.user_id !== uid));
+  };
+
+  const toggleVip = async (uid: string, name: string) => {
+    const isVip = vipIds.has(uid);
+    if (isVip) await revokeVip(uid, name);
+    else await grantVip(uid, name);
   };
 
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
@@ -264,6 +293,46 @@ function AdminPage() {
             </Button>
           </div>
         ))}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Users className="size-4" /> Tüm Kullanıcılar ({allUsers.length})
+        </h2>
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border">
+          {allUsers.map((u) => {
+            const isVip = vipIds.has(u.id);
+            return (
+              <div key={u.id} className="flex items-center gap-2 p-3">
+                {u.avatar_url
+                  ? <img src={u.avatar_url} alt="" className="size-8 rounded-full" />
+                  : <div className="size-8 rounded-full bg-secondary" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium">{u.display_name}</span>
+                    {isVip && <Crown className="size-3 text-amber-400" />}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-mono">#{u.id.slice(0, 8)}</p>
+                </div>
+                <Button size="sm" variant="outline" disabled={busy === u.id} onClick={() => kickFromAllRooms(u.id, u.display_name)}>
+                  <UserX className="size-3.5" /> At
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isVip ? "secondary" : "outline"}
+                  disabled={busy === u.id}
+                  onClick={() => toggleVip(u.id, u.display_name)}
+                  title={isVip ? "VIP Kaldır" : "VIP Yap"}
+                >
+                  <Crown className={`size-3.5 ${isVip ? "text-amber-400" : ""}`} />
+                </Button>
+                <Button size="sm" variant="destructive" disabled={busy === u.id || u.id === user?.id} onClick={() => deleteUser(u.id, u.display_name)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );
