@@ -106,6 +106,47 @@ function RoomPage() {
 
   useEffect(() => { loadAll(); }, [roomId]);
 
+  // Fetch VIP/admin roles for everyone currently in seats so we can highlight
+  // usernames and play entry effects.
+  useEffect(() => {
+    const userIds = seats.map(s => s.user_id).filter(Boolean) as string[];
+    if (userIds.length === 0) return;
+    supabase.from("user_roles").select("user_id,role").in("user_id", userIds).then(({ data }) => {
+      const set = new Set<string>();
+      (data ?? []).forEach((r: any) => {
+        if (r.role === "vip" || r.role === "admin") set.add(r.user_id);
+      });
+      setVipIds(set);
+    });
+  }, [seats]);
+
+  // Award +1 active minute (+5 XP) every 60s while the user has the room open.
+  useEffect(() => {
+    if (!user || !roomId) return;
+    const t = setInterval(() => {
+      supabase.rpc("award_room_minute" as any, { _room_id: roomId }).then(({ error }) => {
+        if (!error) refreshProfile();
+      });
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [user?.id, roomId, refreshProfile]);
+
+  // Detect newly-seated VIPs and play an entry effect overlay
+  const lastSeenSeatedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const current = new Set(seats.map(s => s.user_id).filter(Boolean) as string[]);
+    const newly = [...current].filter(id => !lastSeenSeatedRef.current.has(id));
+    lastSeenSeatedRef.current = current;
+    if (newly.length === 0) return;
+    for (const id of newly) {
+      if (!vipIds.has(id)) continue;
+      const name = profiles[id]?.display_name ?? "VIP";
+      const fxId = crypto.randomUUID();
+      setEntryFx({ id: fxId, name });
+      setTimeout(() => setEntryFx(prev => (prev?.id === fxId ? null : prev)), 3000);
+    }
+  }, [seats, vipIds, profiles]);
+
   // Welcome bot + periodic tips (local-only system messages)
   useEffect(() => {
     if (!room || !user || welcomedRef.current) return;
