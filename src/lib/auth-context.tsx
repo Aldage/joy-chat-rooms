@@ -25,6 +25,8 @@ type AuthCtx = {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  pendingDailyBonus: number;
+  acknowledgeDailyBonus: () => void;
 };
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingDailyBonus, setPendingDailyBonus] = useState(0);
 
   const loadProfile = async (uid: string) => {
     const { data } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
@@ -57,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return;
       const amount = Number(data ?? 0);
       if (amount > 0) {
-        toast.success(`🎁 Günlük giriş bonusu: +${amount} coin!`);
+        setPendingDailyBonus(amount);
       }
     } catch {}
   };
@@ -108,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, session, profile, isVip, isAdmin, loading,
       signOut: async () => { await supabase.auth.signOut(); },
       refreshProfile: async () => { if (user) await loadProfile(user.id); },
+      pendingDailyBonus,
+      acknowledgeDailyBonus: () => setPendingDailyBonus(0),
     }}>
       {children}
     </Ctx.Provider>
