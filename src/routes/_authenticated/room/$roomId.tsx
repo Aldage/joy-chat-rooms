@@ -238,7 +238,9 @@ function RoomPage() {
           name === "Çöl Dansçısı" ? "dancer" :
           name === "Ayıcık Kucağı" ? "bear" :
           name === "Kağıt Uçak Yolculuğu" ? "plane" :
-          name === "Roket" ? "rocket" : null;
+          name === "Roket" ? "rocket" :
+          name === "Gül" ? "rose" :
+          name === "Elmas" ? "diamond" : null;
         if (premiumKind) {
           setGiftQueue(prev => [...prev, {
             id, kind: premiumKind, from: fromName, to: toName,
