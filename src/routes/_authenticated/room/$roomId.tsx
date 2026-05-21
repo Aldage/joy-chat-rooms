@@ -730,6 +730,19 @@ function RoomPage() {
         ))}
       </div>
 
+      {/* VIP entry effect */}
+      {entryFx && (
+        <div className="pointer-events-none fixed top-36 left-1/2 -translate-x-1/2 z-40 animate-scale-in">
+          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-gold to-orange-500 px-5 py-2 rounded-full shadow-glow border border-amber-200/40">
+            <Crown className="size-4 text-background animate-pulse" />
+            <p className="text-sm font-display font-extrabold text-background glow-text whitespace-nowrap">
+              👑 VIP {entryFx.name} odaya katıldı!
+            </p>
+            <Sparkles className="size-4 text-background animate-pulse" />
+          </div>
+        </div>
+      )}
+
       {/* Treasure Chest */}
       <div className="fixed top-24 right-3 z-30 flex flex-col items-center gap-1 w-16">
         <button
