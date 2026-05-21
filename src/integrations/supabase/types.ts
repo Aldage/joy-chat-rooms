@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          level: string
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          level?: string
+          message: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          level?: string
+          message?: string
+        }
+        Relationships: []
+      }
       coin_transactions: {
         Row: {
           amount: number
@@ -397,6 +427,7 @@ export type Database = {
         Args: { _delta: number; _room_id: string }
         Returns: number
       }
+      get_admin_stats: { Args: never; Returns: Json }
       get_room_password: { Args: { _room_id: string }; Returns: string }
       has_role: {
         Args: {
