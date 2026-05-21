@@ -194,7 +194,8 @@ function RoomPage() {
           name === "Masum Kedi" || name === "Yavru Kedi" ? "puss" :
           name === "Çöl Dansçısı" ? "dancer" :
           name === "Ayıcık Kucağı" ? "bear" :
-          name === "Kağıt Uçak Yolculuğu" ? "plane" : null;
+          name === "Kağıt Uçak Yolculuğu" ? "plane" :
+          name === "Roket" ? "rocket" : null;
         if (premiumKind) {
           setGiftQueue(prev => [...prev, {
             id, kind: premiumKind, from: fromName, to: toName,
