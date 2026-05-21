@@ -36,12 +36,13 @@ export function DiceGame({ open, onOpenChange, roomId }: {
     setFace(result - 1);
     const isEven = result % 2 === 0;
     const delta = isEven ? bet : -bet; // even: win bet, odd: lose bet
-    const newBal = (profile?.coin_balance ?? 0) + delta;
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ coin_balance: newBal })
-      .eq("id", user.id);
+    const { error } = await supabase.rpc("play_dice" as any, {
+      _bet: bet,
+      _result: result,
+      _is_win: isEven,
+      _room_id: roomId,
+    });
     if (error) { toast.error(error.message); setRolling(false); return; }
     await refreshProfile();
 
@@ -53,21 +54,7 @@ export function DiceGame({ open, onOpenChange, roomId }: {
       room_id: roomId, user_id: user.id, content: text, message_type: "dice",
     });
 
-    // audit log (best-effort)
-    await supabase.from("dice_games" as any).insert({
-      user_id: user.id,
-      room_id: roomId,
-      bet_amount: bet,
-      dice_result: result,
-      is_win: isEven,
-      reward_amount: isEven ? bet : 0,
-    });
-    await supabase.from("coin_transactions" as any).insert({
-      user_id: user.id,
-      amount: delta,
-      type: isEven ? "dice_win" : "dice_bet",
-      description: `Dice ${result} (bet ${bet})`,
-    });
+    void delta;
 
     setRolling(false);
     toast[isEven ? "success" : "message"](isEven ? `Kazandın! +${bet}` : `Kaybettin -${bet}`);

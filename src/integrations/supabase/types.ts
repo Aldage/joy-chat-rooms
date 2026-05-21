@@ -299,6 +299,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           description: string | null
+          has_password: boolean | null
           id: string
           is_active: boolean
           owner_id: string
@@ -312,6 +313,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          has_password?: boolean | null
           id?: string
           is_active?: boolean
           owner_id: string
@@ -325,6 +327,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          has_password?: boolean | null
           id?: string
           is_active?: boolean
           owner_id?: string
@@ -386,10 +389,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_chest_bonus: {
+        Args: { _amount?: number; _room_id: string }
+        Returns: number
+      }
       bump_room_popularity: {
         Args: { _delta: number; _room_id: string }
         Returns: number
       }
+      get_room_password: { Args: { _room_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -397,9 +405,23 @@ export type Database = {
         }
         Returns: boolean
       }
+      play_dice: {
+        Args: {
+          _bet: number
+          _is_win: boolean
+          _result: number
+          _room_id: string
+        }
+        Returns: number
+      }
       purchase_store_item: {
         Args: { _cost: number; _item_id: string; _item_type: string }
         Returns: undefined
+      }
+      topup_coins: { Args: { _amount: number }; Returns: number }
+      verify_room_password: {
+        Args: { _password: string; _room_id: string }
+        Returns: boolean
       }
     }
     Enums: {

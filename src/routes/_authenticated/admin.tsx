@@ -41,7 +41,7 @@ function AdminPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: r }, { data: s }] = await Promise.all([
-      supabase.from("rooms").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      supabase.from("rooms").select("id,title,tag,cover_url,seat_count,owner_id,description,popularity,is_active,created_at,has_password").eq("is_active", true).order("created_at", { ascending: false }),
       supabase.from("room_seats").select("*").not("user_id", "is", null),
     ]);
     setRooms((r ?? []) as Room[]);

@@ -36,10 +36,8 @@ function WalletPage() {
     if (!user || buying !== null) return;
     setBuying(amount);
     try {
-      await supabase
-        .from("profiles")
-        .update({ coin_balance: (profile?.coin_balance ?? 0) + amount })
-        .eq("id", user.id);
+      const { error } = await supabase.rpc("topup_coins" as any, { _amount: amount });
+      if (error) { toast.error(error.message); return; }
       await refreshProfile();
       toast.success("Satın alım başarılı! Hesabınıza Coin yüklendi.", {
         description: `+${amount.toLocaleString()} Coin • ${price}`,
