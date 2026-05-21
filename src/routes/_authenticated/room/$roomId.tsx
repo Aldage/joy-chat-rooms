@@ -81,7 +81,9 @@ function RoomPage() {
   const rafId = useRef<number | null>(null);
 
   const loadAll = async () => {
-    const { data: r } = await supabase.from("rooms").select("*").eq("id", roomId).maybeSingle();
+    const { data: r } = await supabase.from("rooms")
+      .select("id,title,tag,cover_url,seat_count,owner_id,description,popularity,is_active,created_at,has_password")
+      .eq("id", roomId).maybeSingle();
     if (!r) { toast.error("Oda bulunamadı"); nav({ to: "/home" }); return; }
     setRoom(r);
     setEnergy((r as any).popularity ?? 0);
@@ -505,7 +507,7 @@ function RoomPage() {
     if (val && !/^\d{4}$/.test(val)) { toast.error("Şifre 4 haneli olmalı"); return; }
     const { error } = await supabase.from("rooms").update({ password: val }).eq("id", roomId);
     if (error) { toast.error("Şifre kaydedilemedi"); return; }
-    setRoom((r: any) => ({ ...r, password: val }));
+    setRoom((r: any) => ({ ...r, has_password: !!val }));
     setPwOpen(false); setPwInput("");
     toast.success(val ? "Oda şifrelendi 🔐" : "Şifre kaldırıldı");
   };
@@ -559,12 +561,12 @@ function RoomPage() {
           <p className="text-[11px] text-muted-foreground flex items-center gap-2">
             <span className="bg-live text-white px-1.5 py-0.5 rounded text-[9px] font-bold">LIVE</span>
             <Users className="size-3" /> {seats.filter(s => s.user_id).length}/{seats.length}
-            {room?.password && <span className="flex items-center gap-0.5 text-gold"><Lock className="size-3" /> Şifreli</span>}
+            {room?.has_password && <span className="flex items-center gap-0.5 text-gold"><Lock className="size-3" /> Şifreli</span>}
           </p>
         </div>
         {isRoomOwner && (
-          <button onClick={() => { setPwInput(room?.password ?? ""); setPwOpen(true); }} className="size-10 rounded-full bg-card border border-border flex items-center justify-center" title="Odayı şifrele">
-            <Shield className={`size-4 ${room?.password ? "text-gold" : "text-foreground"}`} />
+          <button onClick={() => { setPwInput(""); setPwOpen(true); }} className="size-10 rounded-full bg-card border border-border flex items-center justify-center" title="Odayı şifrele">
+            <Shield className={`size-4 ${room?.has_password ? "text-gold" : "text-foreground"}`} />
           </button>
         )}
         <div className="flex items-center gap-1 bg-card border border-border rounded-full px-3 py-1.5">
@@ -877,7 +879,7 @@ function RoomPage() {
               className="mt-5 w-full text-center text-3xl tracking-[0.6em] font-display font-bold bg-secondary border border-border rounded-2xl py-4 focus:outline-none focus:border-primary"
             />
             <div className="flex gap-2 mt-5">
-              {room?.password && (
+              {room?.has_password && (
                 <button onClick={() => savePassword(null)} className="flex-1 py-3 rounded-2xl bg-secondary text-sm font-semibold hover:bg-secondary/80">
                   Şifreyi Kaldır
                 </button>
