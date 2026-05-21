@@ -64,6 +64,8 @@ function RoomPage() {
   const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(null);
   const [bannedIds, setBannedIds] = useState<Set<string>>(new Set());
   const [modIds, setModIds] = useState<Set<string>>(new Set());
+  const [vipIds, setVipIds] = useState<Set<string>>(new Set());
+  const [entryFx, setEntryFx] = useState<{ id: string; name: string } | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
   const [pwInput, setPwInput] = useState("");
   // Soundboard
