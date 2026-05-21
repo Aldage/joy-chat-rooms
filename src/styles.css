@@ -397,6 +397,70 @@
   .mega-emoji { animation: mega-emoji-pop 2.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 }
 
+@layer components {
+  /* === Premium Rocket Launch === */
+  @keyframes rocket-fly {
+    0%   { bottom: -20%; opacity: 0; transform: translateX(-50%) scale(0.6); }
+    15%  { opacity: 1; }
+    55%  { bottom: 45%;  transform: translateX(-50%) scale(1.05); }
+    100% { bottom: 130%; opacity: 0; transform: translateX(-50%) scale(0.9); }
+  }
+  .rocket-fly {
+    position: absolute;
+    bottom: -20%;
+    animation: rocket-fly 4.2s cubic-bezier(0.5, 0, 0.6, 1) forwards;
+    filter: drop-shadow(0 0 40px oklch(0.8 0.2 60 / 0.7));
+  }
+  @keyframes rocket-tilt {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(2deg); }
+  }
+  .rocket-tilt { display: inline-block; animation: rocket-tilt 0.4s ease-in-out infinite; }
+
+  .rocket-flame {
+    width: 36px;
+    height: 120px;
+    margin-top: -18px;
+    border-radius: 50% 50% 30% 30% / 70% 70% 30% 30%;
+    background: radial-gradient(ellipse at top,
+      oklch(0.98 0.02 90 / 0.95) 0%,
+      oklch(0.85 0.2 70 / 0.9) 30%,
+      oklch(0.7 0.25 35 / 0.85) 60%,
+      oklch(0.55 0.25 15 / 0.4) 100%);
+    filter: blur(2px);
+    animation: rocket-flame-flicker 0.12s ease-in-out infinite alternate;
+    box-shadow: 0 0 60px oklch(0.8 0.22 60 / 0.85), 0 0 120px oklch(0.7 0.25 30 / 0.55);
+  }
+  @keyframes rocket-flame-flicker {
+    from { transform: scaleY(1) scaleX(1); opacity: 0.95; }
+    to   { transform: scaleY(1.18) scaleX(0.88); opacity: 1; }
+  }
+
+  @keyframes rocket-star-twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.8); }
+    50%      { opacity: 1;    transform: scale(1.4); box-shadow: 0 0 8px white; }
+  }
+  .rocket-star { animation: rocket-star-twinkle 1.8s ease-in-out infinite; }
+
+  @keyframes rocket-shockwave {
+    0%   { width: 0; height: 0; opacity: 0.9; border-width: 6px; }
+    100% { width: 140vw; height: 140vw; opacity: 0; border-width: 1px; }
+  }
+  .rocket-shockwave {
+    border: 6px solid oklch(0.85 0.18 70 / 0.7);
+    border-radius: 50%;
+    animation: rocket-shockwave 1.6s ease-out 0.3s forwards;
+  }
+
+  @keyframes rocket-boom {
+    0%   { opacity: 0; transform: translateX(-50%) scale(0.6); }
+    20%  { opacity: 1; transform: translateX(-50%) scale(1.15); }
+    80%  { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
+  }
+  .rocket-boom { animation: rocket-boom 4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+}
+
 @layer utilities {
   /* Silky route transition */
   @keyframes route-in {
